@@ -1,4 +1,4 @@
-package com.rulex.web;
+package com.rulex.exception;
 
 public class NamedRuleNotFoundException extends RuntimeException {
     public NamedRuleNotFoundException(String name) {

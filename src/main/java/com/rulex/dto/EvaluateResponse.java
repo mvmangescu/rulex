@@ -1,4 +1,4 @@
-package com.rulex.web.dto;
+package com.rulex.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.rulex.engine.TraceNode;

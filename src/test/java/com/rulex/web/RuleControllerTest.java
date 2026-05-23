@@ -1,6 +1,7 @@
 package com.rulex.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rulex.controller.RuleController;
 import com.rulex.engine.RuleEngine;
 import com.rulex.engine.RuleEngine.TraceResult;
 import com.rulex.engine.RuleEngine.ValidationResult;
@@ -8,8 +9,8 @@ import com.rulex.engine.TraceNode;
 import com.rulex.exception.RuleEvaluationException;
 import com.rulex.exception.RuleParseException;
 import com.rulex.function.FunctionRegistry;
-import com.rulex.web.dto.EvaluateRequest;
-import com.rulex.web.dto.ValidateRequest;
+import com.rulex.dto.EvaluateRequest;
+import com.rulex.dto.ValidateRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

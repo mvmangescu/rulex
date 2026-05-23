@@ -1,10 +1,16 @@
-package com.rulex.web.dto;
+package com.rulex.dto;
+
+import java.util.Map;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-public record ValidateRequest(
+public record EvaluateRequest(
         @NotBlank(message = "Rule expression must not be blank")
         @Size(max = 4096, message = "Rule expression must not exceed 4096 characters")
-        String rule
+        String rule,
+
+        @NotNull(message = "Context must not be null")
+        Map<String, Object> context
 ) {}

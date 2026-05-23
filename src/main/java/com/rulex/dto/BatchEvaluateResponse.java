@@ -1,4 +1,4 @@
-package com.rulex.web.dto;
+package com.rulex.dto;
 
 import java.util.List;
 

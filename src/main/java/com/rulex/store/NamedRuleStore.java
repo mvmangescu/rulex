@@ -2,6 +2,8 @@ package com.rulex.store;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.rulex.engine.CompiledRule;
+import com.rulex.entity.NamedRuleEntity;
+import com.rulex.repository.NamedRuleRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

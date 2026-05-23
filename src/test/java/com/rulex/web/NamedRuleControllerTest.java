@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+import com.rulex.controller.NamedRuleController;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

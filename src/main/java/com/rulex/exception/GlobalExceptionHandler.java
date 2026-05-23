@@ -1,8 +1,9 @@
-package com.rulex.web;
+package com.rulex.exception;
 
 import java.time.Instant;
 import java.util.stream.Collectors;
 
+import com.rulex.web.RequestIdFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -12,9 +13,6 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import com.rulex.exception.RuleEvaluationException;
-import com.rulex.exception.RuleParseException;
 
 import jakarta.validation.ConstraintViolationException;
 

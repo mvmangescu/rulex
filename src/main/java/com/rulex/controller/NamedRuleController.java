@@ -1,16 +1,17 @@
-package com.rulex.web;
+package com.rulex.controller;
 
 import com.rulex.engine.RuleEngine;
+import com.rulex.exception.NamedRuleNotFoundException;
 import com.rulex.store.NamedRule;
 import com.rulex.store.NamedRuleStore;
-import com.rulex.web.dto.EvaluateResponse;
+import com.rulex.web.RequestIdFilter;
+import com.rulex.dto.EvaluateResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -20,13 +21,12 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/rules/named")
 @Validated
 @Tag(name = "Named Rules", description = "Store, manage, and evaluate named rule expressions")
 public class NamedRuleController {
-
-    private static final Logger log = LoggerFactory.getLogger(NamedRuleController.class);
 
     private final NamedRuleStore store;
     private final RuleEngine ruleEngine;
@@ -38,10 +38,11 @@ public class NamedRuleController {
 
     public record SaveRequest(
             @NotBlank(message = "expression must not be blank")
-            String expression) {}
+            String expression) {
+    }
 
     @Operation(summary = "Create or update a named rule",
-               description = "If the rule name already exists, its expression is updated and the old compiled form is evicted from cache.")
+            description = "If the rule name already exists, its expression is updated and the old compiled form is evicted from cache.")
     @PutMapping("/{name}")
     public ResponseEntity<NamedRule> save(
             @PathVariable
@@ -72,7 +73,7 @@ public class NamedRuleController {
     }
 
     @Operation(summary = "Delete a named rule",
-               description = "Deletes the named rule and evicts its expression from the compile cache.")
+            description = "Deletes the named rule and evicts its expression from the compile cache.")
     @DeleteMapping("/{name}")
     public ResponseEntity<Void> delete(@PathVariable String name) {
         if (store.delete(name)) {

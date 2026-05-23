@@ -1,4 +1,4 @@
-package com.rulex.web.dto;
+package com.rulex.dto;
 
 public record ValidateResponse(boolean valid, String error) {
 }
