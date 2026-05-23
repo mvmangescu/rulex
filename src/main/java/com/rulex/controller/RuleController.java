@@ -1,74 +1,47 @@
 package com.rulex.controller;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-
+import com.rulex.config.RuleEngineProperties;
+import com.rulex.dto.*;
+import com.rulex.dto.BatchEvaluateResponse.BatchResult;
+import com.rulex.engine.RuleEngine;
 import com.rulex.exception.GlobalExceptionHandler;
+import com.rulex.exception.NamedRuleNotFoundException;
+import com.rulex.function.FunctionRegistry;
+import com.rulex.dto.RuleDto;
+import com.rulex.service.RuleService;
 import com.rulex.web.RequestIdFilter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import com.rulex.config.RuleEngineProperties;
-import com.rulex.engine.RuleEngine;
-import com.rulex.function.FunctionRegistry;
-import com.rulex.dto.BatchEvaluateRequest;
-import com.rulex.dto.BatchEvaluateResponse;
-import com.rulex.dto.BatchEvaluateResponse.BatchResult;
-import com.rulex.dto.EvaluateRequest;
-import com.rulex.dto.EvaluateResponse;
-import com.rulex.dto.ValidateRequest;
-import com.rulex.dto.ValidateResponse;
+import java.net.URI;
+import java.time.Instant;
+import java.util.*;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-
+@Slf4j
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/rules")
 @Validated
-@Tag(name = "Rule Engine", description = "Evaluate, validate, and batch-evaluate rule expressions")
+@Tag(name = "Rule Engine", description = "Evaluate, validate, batch-evaluate rule expressions, and manage named rules")
 public class RuleController {
-
-    private static final Logger log = LoggerFactory.getLogger(RuleController.class);
 
     private final RuleEngine ruleEngine;
     private final FunctionRegistry functionRegistry;
     private final RuleEngineProperties properties;
-
-    public RuleController(RuleEngine ruleEngine, FunctionRegistry functionRegistry,
-                          RuleEngineProperties properties) {
-        this.ruleEngine = ruleEngine;
-        this.functionRegistry = functionRegistry;
-        this.properties = properties;
-    }
+    private final RuleService store;
 
     @Operation(summary = "Evaluate a rule expression",
-               description = "Evaluates a rule against the given context and returns a boolean result. " +
-                             "Pass ?explain=true to include a full execution trace in the response.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Evaluated successfully",
-                    content = @Content(schema = @Schema(implementation = EvaluateResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Parse error or missing fields",
-                    content = @Content(schema = @Schema(implementation = GlobalExceptionHandler.ErrorResponse.class))),
-            @ApiResponse(responseCode = "422", description = "Evaluation error",
-                    content = @Content(schema = @Schema(implementation = GlobalExceptionHandler.ErrorResponse.class)))
-    })
+            description = "Evaluates a rule against the given context. Pass ?explain=true for a full execution trace.")
     @PostMapping("/evaluate")
     public ResponseEntity<EvaluateResponse> evaluate(
             @Valid @RequestBody EvaluateRequest request,
@@ -84,13 +57,7 @@ public class RuleController {
     }
 
     @Operation(summary = "Validate a rule expression",
-               description = "Checks rule syntax without evaluating it against any context.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Validation result",
-                    content = @Content(schema = @Schema(implementation = ValidateResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Missing required fields",
-                    content = @Content(schema = @Schema(implementation = GlobalExceptionHandler.ErrorResponse.class)))
-    })
+            description = "Checks rule syntax without evaluating against any context.")
     @PostMapping("/validate")
     public ResponseEntity<ValidateResponse> validate(@Valid @RequestBody ValidateRequest request) {
         log.info("Validate rule, length={}", request.rule().length());
@@ -99,13 +66,7 @@ public class RuleController {
     }
 
     @Operation(summary = "Batch-evaluate multiple rule expressions",
-               description = "Evaluates multiple rules in a single call. Individual failures do not fail the batch.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Batch results (per-rule success or error)",
-                    content = @Content(schema = @Schema(implementation = BatchEvaluateResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Validation error",
-                    content = @Content(schema = @Schema(implementation = GlobalExceptionHandler.ErrorResponse.class)))
-    })
+            description = "Evaluates multiple rules in a single call. Individual failures do not fail the batch.")
     @PostMapping("/batch-evaluate")
     public ResponseEntity<?> batchEvaluate(@Valid @RequestBody BatchEvaluateRequest request) {
         if (request.rules().size() > properties.maxBatchSize()) {
@@ -120,22 +81,79 @@ public class RuleController {
         int index = 0;
         for (EvaluateRequest item : request.rules()) {
             try {
-                boolean result = ruleEngine.evaluate(item.rule(), item.context());
-                results.add(BatchResult.ok(index, item.rule(), result));
+                results.add(BatchResult.ok(index, item.rule(), ruleEngine.evaluate(item.rule(), item.context())));
             } catch (Exception e) {
-                String message = Objects.requireNonNullElse(e.getMessage(), e.getClass().getSimpleName());
-                results.add(BatchResult.fail(index, item.rule(), message));
+                results.add(BatchResult.fail(index, item.rule(),
+                        Objects.requireNonNullElse(e.getMessage(), e.getClass().getSimpleName())));
             }
             index++;
         }
         return ResponseEntity.ok(new BatchEvaluateResponse(results, requestId()));
     }
 
-    @Operation(summary = "List available built-in functions",
-               description = "Returns the names of all registered functions usable in rule expressions.")
+    @Operation(summary = "List available built-in functions")
     @GetMapping("/functions")
-    public ResponseEntity<java.util.Set<String>> functions() {
+    public ResponseEntity<Set<String>> functions() {
         return ResponseEntity.ok(functionRegistry.getFunctionNames());
+    }
+
+    public record SaveRequest(
+            @NotBlank(message = "expression must not be blank") String expression,
+            String description) {}
+
+    @Operation(summary = "Create or update a named rule",
+            description = "If the name already exists, its expression is updated and the old compiled form is evicted from cache.")
+    @PutMapping("/named/{name}")
+    public ResponseEntity<RuleDto> saveNamed(
+            @PathVariable @NotBlank @Size(max = 256) String name,
+            @Valid @RequestBody SaveRequest request) {
+        log.info("Saving named rule '{}'", name);
+        boolean exists = store.find(name).isPresent();
+        RuleDto saved = store.save(new RuleDto(null, name, request.expression(), request.description(), null, null));
+        if (!exists) {
+            return ResponseEntity.created(URI.create("/api/v1/rules/named/" + name)).body(saved);
+        }
+        return ResponseEntity.ok(saved);
+    }
+
+    @Operation(summary = "Get a named rule by name")
+    @GetMapping("/named/{name}")
+    public ResponseEntity<RuleDto> getNamed(@PathVariable String name) {
+        return store.find(name).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @Operation(summary = "List all named rules")
+    @GetMapping("/named")
+    public ResponseEntity<Collection<RuleDto>> listNamed() {
+        return ResponseEntity.ok(store.findAll());
+    }
+
+    @Operation(summary = "Delete a named rule",
+            description = "Deletes the rule and evicts its expression from the compile cache.")
+    @DeleteMapping("/named/{name}")
+    public ResponseEntity<Void> deleteNamed(@PathVariable String name) {
+        if (store.delete(name)) {
+            log.info("Deleted named rule '{}'", name);
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @Operation(summary = "Evaluate a named rule against a context")
+    @PostMapping("/named/{name}/evaluate")
+    public ResponseEntity<EvaluateResponse> evaluateNamed(
+            @PathVariable String name,
+            @RequestBody Map<String, Object> context,
+            @RequestParam(required = false, defaultValue = "false") boolean explain) {
+        RuleDto rule = store.find(name).orElseThrow(() -> new NamedRuleNotFoundException(name));
+        log.info("Evaluating named rule '{}', explain={}", name, explain);
+        if (explain) {
+            RuleEngine.TraceResult traced = ruleEngine.evaluateWithTrace(rule.expression(), context);
+            return ResponseEntity.ok(EvaluateResponse.withTrace(
+                    traced.result(), rule.expression(), requestId(), traced.trace()));
+        }
+        boolean result = ruleEngine.evaluate(rule.expression(), context);
+        return ResponseEntity.ok(EvaluateResponse.of(result, rule.expression(), requestId()));
     }
 
     private static String requestId() {

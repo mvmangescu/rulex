@@ -16,7 +16,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-import com.rulex.controller.NamedRuleController;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -27,15 +26,17 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rulex.controller.RuleController;
 import com.rulex.engine.RuleEngine;
 import com.rulex.engine.RuleEngine.TraceResult;
 import com.rulex.engine.TraceNode;
-import com.rulex.store.NamedRule;
-import com.rulex.store.NamedRuleStore;
+import com.rulex.function.FunctionRegistry;
+import com.rulex.dto.RuleDto;
+import com.rulex.service.RuleService;
 
-@WebMvcTest(NamedRuleController.class)
-@DisplayName("NamedRuleController web layer tests")
-class NamedRuleControllerTest {
+@WebMvcTest(RuleController.class)
+@DisplayName("Named rules web layer tests")
+class RuleDtoControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -44,15 +45,18 @@ class NamedRuleControllerTest {
     private ObjectMapper objectMapper;
 
     @MockBean
-    private NamedRuleStore namedRuleStore;
+    private RuleService ruleService;
 
     @MockBean
     private RuleEngine ruleEngine;
 
+    @MockBean
+    private FunctionRegistry functionRegistry;
+
     private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");
 
-    private NamedRule sampleRule() {
-        return new NamedRule("senior-check", "age > 60", NOW, NOW);
+    private RuleDto sampleRule() {
+        return new RuleDto(1L, "senior-check", "age > 60", null, NOW, NOW);
     }
 
     // ── PUT /{name} ───────────────────────────────────────────────────────────
@@ -64,8 +68,8 @@ class NamedRuleControllerTest {
         @Test
         @DisplayName("Returns 201 with Location header when creating a new rule")
         void save_newRule_returns201() throws Exception {
-            when(namedRuleStore.save("senior-check", "age > 60"))
-                    .thenReturn(new NamedRuleStore.SaveResult(sampleRule(), true));
+            when(ruleService.find("senior-check")).thenReturn(Optional.empty());
+            when(ruleService.save(any(RuleDto.class))).thenReturn(sampleRule());
 
             mockMvc.perform(put("/api/v1/rules/named/senior-check")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -79,9 +83,9 @@ class NamedRuleControllerTest {
         @Test
         @DisplayName("Returns 200 when updating an existing rule")
         void save_existingRule_returns200() throws Exception {
-            NamedRule updated = new NamedRule("senior-check", "age > 65", NOW, Instant.now());
-            when(namedRuleStore.save("senior-check", "age > 65"))
-                    .thenReturn(new NamedRuleStore.SaveResult(updated, false));
+            RuleDto updated = new RuleDto(1L, "senior-check", "age > 65", null, NOW, Instant.now());
+            when(ruleService.find("senior-check")).thenReturn(Optional.of(sampleRule()));
+            when(ruleService.save(any(RuleDto.class))).thenReturn(updated);
 
             mockMvc.perform(put("/api/v1/rules/named/senior-check")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -110,7 +114,7 @@ class NamedRuleControllerTest {
         @Test
         @DisplayName("Returns 200 with rule when found")
         void get_existingRule_returns200() throws Exception {
-            when(namedRuleStore.find("senior-check")).thenReturn(Optional.of(sampleRule()));
+            when(ruleService.find("senior-check")).thenReturn(Optional.of(sampleRule()));
 
             mockMvc.perform(get("/api/v1/rules/named/senior-check"))
                     .andExpect(status().isOk())
@@ -121,7 +125,7 @@ class NamedRuleControllerTest {
         @Test
         @DisplayName("Returns 404 when rule does not exist")
         void get_missingRule_returns404() throws Exception {
-            when(namedRuleStore.find("unknown")).thenReturn(Optional.empty());
+            when(ruleService.find("unknown")).thenReturn(Optional.empty());
 
             mockMvc.perform(get("/api/v1/rules/named/unknown"))
                     .andExpect(status().isNotFound());
@@ -137,7 +141,7 @@ class NamedRuleControllerTest {
         @Test
         @DisplayName("Returns 200 with all rules")
         void list_returnsAllRules() throws Exception {
-            when(namedRuleStore.findAll()).thenReturn(List.of(sampleRule()));
+            when(ruleService.findAll()).thenReturn(List.of(sampleRule()));
 
             mockMvc.perform(get("/api/v1/rules/named"))
                     .andExpect(status().isOk())
@@ -147,7 +151,7 @@ class NamedRuleControllerTest {
         @Test
         @DisplayName("Returns 200 with empty array when no rules exist")
         void list_empty_returnsEmptyArray() throws Exception {
-            when(namedRuleStore.findAll()).thenReturn(List.of());
+            when(ruleService.findAll()).thenReturn(List.of());
 
             mockMvc.perform(get("/api/v1/rules/named"))
                     .andExpect(status().isOk())
@@ -165,7 +169,7 @@ class NamedRuleControllerTest {
         @Test
         @DisplayName("Returns 204 when rule is deleted")
         void delete_existingRule_returns204() throws Exception {
-            when(namedRuleStore.delete("senior-check")).thenReturn(true);
+            when(ruleService.delete("senior-check")).thenReturn(true);
 
             mockMvc.perform(delete("/api/v1/rules/named/senior-check"))
                     .andExpect(status().isNoContent());
@@ -174,7 +178,7 @@ class NamedRuleControllerTest {
         @Test
         @DisplayName("Returns 404 when rule does not exist")
         void delete_missingRule_returns404() throws Exception {
-            when(namedRuleStore.delete("unknown")).thenReturn(false);
+            when(ruleService.delete("unknown")).thenReturn(false);
 
             mockMvc.perform(delete("/api/v1/rules/named/unknown"))
                     .andExpect(status().isNotFound());
@@ -190,7 +194,7 @@ class NamedRuleControllerTest {
         @Test
         @DisplayName("Returns 200 with result when rule exists")
         void evaluate_existingRule_returnsResult() throws Exception {
-            when(namedRuleStore.find("senior-check")).thenReturn(Optional.of(sampleRule()));
+            when(ruleService.find("senior-check")).thenReturn(Optional.of(sampleRule()));
             when(ruleEngine.evaluate(anyString(), anyMap())).thenReturn(true);
 
             mockMvc.perform(post("/api/v1/rules/named/senior-check/evaluate")
@@ -204,7 +208,7 @@ class NamedRuleControllerTest {
         @Test
         @DisplayName("Returns 200 with trace when explain=true")
         void evaluate_withExplain_returnsTrace() throws Exception {
-            when(namedRuleStore.find("senior-check")).thenReturn(Optional.of(sampleRule()));
+            when(ruleService.find("senior-check")).thenReturn(Optional.of(sampleRule()));
             TraceNode trace = TraceNode.leaf("age > 60", "COMPARISON", true, "65.0 > 60.0");
             when(ruleEngine.evaluateWithTrace(anyString(), anyMap()))
                     .thenReturn(new TraceResult(true, trace));
@@ -222,7 +226,7 @@ class NamedRuleControllerTest {
         @Test
         @DisplayName("Returns 404 when named rule does not exist")
         void evaluate_missingRule_returns404() throws Exception {
-            when(namedRuleStore.find("unknown")).thenReturn(Optional.empty());
+            when(ruleService.find("unknown")).thenReturn(Optional.empty());
 
             mockMvc.perform(post("/api/v1/rules/named/unknown/evaluate")
                             .contentType(MediaType.APPLICATION_JSON)

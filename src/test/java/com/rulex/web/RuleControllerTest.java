@@ -9,6 +9,7 @@ import com.rulex.engine.TraceNode;
 import com.rulex.exception.RuleEvaluationException;
 import com.rulex.exception.RuleParseException;
 import com.rulex.function.FunctionRegistry;
+import com.rulex.service.RuleService;
 import com.rulex.dto.EvaluateRequest;
 import com.rulex.dto.ValidateRequest;
 import org.junit.jupiter.api.DisplayName;
@@ -44,6 +45,9 @@ class RuleControllerTest {
 
     @MockBean
     FunctionRegistry functionRegistry;
+
+    @MockBean
+    RuleService ruleService;
 
     // ── /evaluate endpoint ────────────────────────────────────────────────────
 
