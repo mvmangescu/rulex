@@ -37,8 +37,8 @@ public class GlobalExceptionHandler {
                 .body(error("EVALUATION_ERROR", ex.getMessage()));
     }
 
-    @ExceptionHandler(NamedRuleNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNamedRuleNotFound(NamedRuleNotFoundException ex) {
+    @ExceptionHandler(RuleNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNamedRuleNotFound(RuleNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(error("NOT_FOUND", ex.getMessage()));
     }

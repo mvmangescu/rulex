@@ -5,8 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.Instant;
-
 @Entity
 @Table(name = "rules")
 @Getter
@@ -27,17 +25,9 @@ public class RuleEntity {
     @Column(length = 1024)
     private String description;
 
-    @Column(nullable = false, updatable = false)
-    private Instant createdAt;
-
-    @Column(nullable = false)
-    private Instant updatedAt;
-
-    public RuleEntity(String name, String expression, String description, Instant createdAt, Instant updatedAt) {
+    public RuleEntity(String name, String expression, String description) {
         this.name = name;
         this.expression = expression;
         this.description = description;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
     }
 }

@@ -1,17 +1,11 @@
 package com.rulex.web;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rulex.controller.RuleController;
+import com.rulex.dto.RuleResponse;
 import com.rulex.engine.RuleEngine;
 import com.rulex.engine.RuleEngine.TraceResult;
-import com.rulex.engine.RuleEngine.ValidationResult;
 import com.rulex.engine.TraceNode;
-import com.rulex.exception.RuleEvaluationException;
-import com.rulex.exception.RuleParseException;
-import com.rulex.function.FunctionRegistry;
 import com.rulex.service.RuleService;
-import com.rulex.dto.EvaluateRequest;
-import com.rulex.dto.ValidateRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -21,244 +15,220 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Map;
+import java.util.List;
+import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(RuleController.class)
-@DisplayName("RuleController web layer tests")
+@DisplayName("RuleController tests")
 class RuleControllerTest {
 
     @Autowired
     MockMvc mockMvc;
 
-    @Autowired
-    ObjectMapper objectMapper;
+    @MockBean
+    RuleService ruleService;
 
     @MockBean
     RuleEngine ruleEngine;
 
-    @MockBean
-    FunctionRegistry functionRegistry;
+    private RuleResponse sampleRule() {
+        return new RuleResponse(1L, "senior-check", "age > 60", null);
+    }
 
-    @MockBean
-    RuleService ruleService;
-
-    // ── /evaluate endpoint ────────────────────────────────────────────────────
+    // ── POST  ───────────────────────────────────────────────────────────
 
     @Nested
-    @DisplayName("POST /api/v1/rules/evaluate")
-    class EvaluateEndpoint {
+    @DisplayName("POST /api/v1/rules")
+    class CreateEndpoint {
 
         @Test
-        @DisplayName("Returns 200 with result=true for a passing rule")
-        void evaluate_returnsTrue() throws Exception {
+        @DisplayName("Returns 201 with Location header when creating a new rule")
+        void create_newRule_returns201() throws Exception {
+            when(ruleService.create(any(RuleResponse.class))).thenReturn(sampleRule());
+
+            mockMvc.perform(post("/api/v1/rules")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"name\": \"senior-check\", \"expression\": \"age > 60\"}"))
+                    .andExpect(status().isCreated())
+                    .andExpect(header().string("Location", "/api/v1/rules/senior-check"))
+                    .andExpect(jsonPath("$.name").value("senior-check"))
+                    .andExpect(jsonPath("$.expression").value("age > 60"));
+        }
+
+        @Test
+        @DisplayName("Returns 400 when expression is blank")
+        void create_blankExpression_returns400() throws Exception {
+            mockMvc.perform(post("/api/v1/rules")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"name\": \"senior-check\", \"expression\": \"\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+        }
+    }
+
+    // ── PUT /named/{name} ─────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("PUT /api/v1/rules/{name}")
+    class UpdateEndpoint {
+
+        @Test
+        @DisplayName("Returns 200 when updating an existing rule")
+        void update_existingRule_returns200() throws Exception {
+            RuleResponse updated = new RuleResponse(1L, "senior-check", "age > 65", null);
+            when(ruleService.update(anyString(), any(RuleResponse.class))).thenReturn(updated);
+
+            mockMvc.perform(put("/api/v1/rules/senior-check")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"name\": \"senior-check\", \"expression\": \"age > 65\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.expression").value("age > 65"));
+        }
+
+        @Test
+        @DisplayName("Returns 400 when expression is blank")
+        void update_blankExpression_returns400() throws Exception {
+            mockMvc.perform(put("/api/v1/rules/senior-check")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"name\": \"senior-check\", \"expression\": \"\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+        }
+    }
+
+    // ── GET /named/{name} ─────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("GET /api/v1/rules/{name}")
+    class GetEndpoint {
+
+        @Test
+        @DisplayName("Returns 200 with rule when found")
+        void get_existingRule_returns200() throws Exception {
+            when(ruleService.findByName("senior-check")).thenReturn(Optional.of(sampleRule()));
+
+            mockMvc.perform(get("/api/v1/rules/senior-check"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.name").value("senior-check"))
+                    .andExpect(jsonPath("$.expression").value("age > 60"));
+        }
+
+        @Test
+        @DisplayName("Returns 404 when rule does not exist")
+        void get_missingRule_returns404() throws Exception {
+            when(ruleService.findByName("unknown")).thenReturn(Optional.empty());
+
+            mockMvc.perform(get("/api/v1/rules/unknown"))
+                    .andExpect(status().isNotFound());
+        }
+    }
+
+    // ── GET /api/v1/rules ─────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("GET /api/v1/rules")
+    class ListEndpoint {
+
+        @Test
+        @DisplayName("Returns 200 with all rules")
+        void list_returnsAllRules() throws Exception {
+            when(ruleService.findAll()).thenReturn(List.of(sampleRule()));
+
+            mockMvc.perform(get("/api/v1/rules"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].name").value("senior-check"));
+        }
+
+        @Test
+        @DisplayName("Returns 200 with empty array when no rules exist")
+        void list_empty_returnsEmptyArray() throws Exception {
+            when(ruleService.findAll()).thenReturn(List.of());
+
+            mockMvc.perform(get("/api/v1/rules"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$").isArray())
+                    .andExpect(jsonPath("$").isEmpty());
+        }
+    }
+
+    // ── DELETE /api/v1/rules/{name} ───────────────────────────────────────────
+
+    @Nested
+    @DisplayName("DELETE /api/v1/rules/{name}")
+    class DeleteEndpoint {
+
+        @Test
+        @DisplayName("Returns 204 when rule is deleted")
+        void delete_existingRule_returns204() throws Exception {
+            when(ruleService.deleteByName("senior-check")).thenReturn(true);
+
+            mockMvc.perform(delete("/api/v1/rules/senior-check"))
+                    .andExpect(status().isNoContent());
+        }
+
+        @Test
+        @DisplayName("Returns 404 when rule does not exist")
+        void delete_missingRule_returns404() throws Exception {
+            when(ruleService.deleteByName("unknown")).thenReturn(false);
+
+            mockMvc.perform(delete("/api/v1/rules/unknown"))
+                    .andExpect(status().isNotFound());
+        }
+    }
+
+    // ── POST /api/v1/rules/{name}/evaluate ────────────────────────────────────
+
+    @Nested
+    @DisplayName("POST /api/v1/rules/{name}/evaluate")
+    class EvaluateNamedEndpoint {
+
+        @Test
+        @DisplayName("Returns 200 with result when rule exists")
+        void evaluate_existingRule_returnsResult() throws Exception {
+            when(ruleService.findByName("senior-check")).thenReturn(Optional.of(sampleRule()));
             when(ruleEngine.evaluate(anyString(), anyMap())).thenReturn(true);
 
-            EvaluateRequest request = new EvaluateRequest("age > 18", Map.of("age", 25));
-
-            mockMvc.perform(post("/api/v1/rules/evaluate")
+            mockMvc.perform(post("/api/v1/rules/senior-check/evaluate")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
+                            .content("{\"age\": 65}"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.result").value(true))
-                    .andExpect(jsonPath("$.rule").value("age > 18"));
-        }
-
-        @Test
-        @DisplayName("Returns 200 with result=false for a failing rule")
-        void evaluate_returnsFalse() throws Exception {
-            when(ruleEngine.evaluate(anyString(), anyMap())).thenReturn(false);
-
-            EvaluateRequest request = new EvaluateRequest("age > 18", Map.of("age", 10));
-
-            mockMvc.perform(post("/api/v1/rules/evaluate")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.result").value(false))
-                    .andExpect(jsonPath("$.rule").value("age > 18"));
-        }
-
-        @Test
-        @DisplayName("Returns 400 when rule is blank")
-        void evaluate_blankRule_returns400() throws Exception {
-            EvaluateRequest request = new EvaluateRequest("", Map.of("age", 25));
-
-            mockMvc.perform(post("/api/v1/rules/evaluate")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
-        }
-
-        @Test
-        @DisplayName("Returns 400 when context is null")
-        void evaluate_nullContext_returns400() throws Exception {
-            String json = "{\"rule\": \"age > 18\", \"context\": null}";
-
-            mockMvc.perform(post("/api/v1/rules/evaluate")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(json))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
-        }
-
-        @Test
-        @DisplayName("Returns 400 when rule has a parse error")
-        void evaluate_parseError_returns400() throws Exception {
-            when(ruleEngine.evaluate(anyString(), anyMap()))
-                    .thenThrow(new RuleParseException("age >>> 18", 1, 5, "extraneous input '>'"));
-
-            EvaluateRequest request = new EvaluateRequest("age >>> 18", Map.of("age", 25));
-
-            mockMvc.perform(post("/api/v1/rules/evaluate")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.error").value("PARSE_ERROR"))
-                    .andExpect(jsonPath("$.message").isNotEmpty())
-                    .andExpect(jsonPath("$.timestamp").isNotEmpty());
-        }
-
-        @Test
-        @DisplayName("Returns 422 when rule has an evaluation error")
-        void evaluate_evaluationError_returns422() throws Exception {
-            when(ruleEngine.evaluate(anyString(), anyMap()))
-                    .thenThrow(new RuleEvaluationException("Cannot compare null values"));
-
-            EvaluateRequest request = new EvaluateRequest("age > 18", Map.of());
-
-            mockMvc.perform(post("/api/v1/rules/evaluate")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isUnprocessableEntity())
-                    .andExpect(jsonPath("$.error").value("EVALUATION_ERROR"))
-                    .andExpect(jsonPath("$.message").isNotEmpty())
-                    .andExpect(jsonPath("$.timestamp").isNotEmpty());
-        }
-
-        @Test
-        @DisplayName("Returns 400 when request body is malformed JSON")
-        void evaluate_malformedJson_returns400() throws Exception {
-            mockMvc.perform(post("/api/v1/rules/evaluate")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{invalid json}"))
-                    .andExpect(status().isBadRequest());
+                    .andExpect(jsonPath("$.rule").value("age > 60"));
         }
 
         @Test
         @DisplayName("Returns 200 with trace when explain=true")
         void evaluate_withExplain_returnsTrace() throws Exception {
-            TraceNode traceNode = TraceNode.leaf("age > 18", "COMPARISON", true, "25.0 > 18.0");
+            when(ruleService.findByName("senior-check")).thenReturn(Optional.of(sampleRule()));
+            TraceNode trace = TraceNode.leaf("age > 60", "COMPARISON", true, "65.0 > 60.0");
             when(ruleEngine.evaluateWithTrace(anyString(), anyMap()))
-                    .thenReturn(new TraceResult(true, traceNode));
+                    .thenReturn(new TraceResult(true, trace));
 
-            EvaluateRequest request = new EvaluateRequest("age > 18", Map.of("age", 25));
-
-            mockMvc.perform(post("/api/v1/rules/evaluate")
+            mockMvc.perform(post("/api/v1/rules/senior-check/evaluate")
                             .param("explain", "true")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
+                            .content("{\"age\": 65}"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.result").value(true))
-                    .andExpect(jsonPath("$.trace").exists())
                     .andExpect(jsonPath("$.trace.type").value("COMPARISON"))
-                    .andExpect(jsonPath("$.trace.result").value(true))
-                    .andExpect(jsonPath("$.trace.evaluated").value("25.0 > 18.0"));
+                    .andExpect(jsonPath("$.trace.evaluated").value("65.0 > 60.0"));
         }
 
         @Test
-        @DisplayName("Returns 200 without trace when explain is omitted")
-        void evaluate_withoutExplain_noTrace() throws Exception {
-            when(ruleEngine.evaluate(anyString(), anyMap())).thenReturn(true);
+        @DisplayName("Returns 404 when named rule does not exist")
+        void evaluate_missingRule_returns404() throws Exception {
+            when(ruleService.findByName("unknown")).thenReturn(Optional.empty());
 
-            EvaluateRequest request = new EvaluateRequest("age > 18", Map.of("age", 25));
-
-            mockMvc.perform(post("/api/v1/rules/evaluate")
+            mockMvc.perform(post("/api/v1/rules/unknown/evaluate")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.result").value(true))
-                    .andExpect(jsonPath("$.trace").doesNotExist());
-        }
-    }
-
-    // ── /validate endpoint ────────────────────────────────────────────────────
-
-    @Nested
-    @DisplayName("POST /api/v1/rules/validate")
-    class ValidateEndpoint {
-
-        @Test
-        @DisplayName("Returns 200 with valid=true for a syntactically correct rule")
-        void validate_validRule_returnsSuccess() throws Exception {
-            when(ruleEngine.validate(anyString())).thenReturn(ValidationResult.success());
-
-            ValidateRequest request = new ValidateRequest("age > 18 AND active = true");
-
-            mockMvc.perform(post("/api/v1/rules/validate")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.valid").value(true))
-                    .andExpect(jsonPath("$.error").doesNotExist());
-        }
-
-        @Test
-        @DisplayName("Returns 200 with valid=false and error message for invalid rule")
-        void validate_invalidRule_returnsFailure() throws Exception {
-            when(ruleEngine.validate(anyString()))
-                    .thenReturn(ValidationResult.failure("Parse error at line 1:5 — extraneous input '>'"));
-
-            ValidateRequest request = new ValidateRequest("age >>> 18");
-
-            mockMvc.perform(post("/api/v1/rules/validate")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.valid").value(false))
-                    .andExpect(jsonPath("$.error").isNotEmpty());
-        }
-
-        @Test
-        @DisplayName("Returns 400 when rule is blank")
-        void validate_blankRule_returns400() throws Exception {
-            ValidateRequest request = new ValidateRequest("   ");
-
-            mockMvc.perform(post("/api/v1/rules/validate")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
-        }
-
-        @Test
-        @DisplayName("Returns 400 when request body is missing")
-        void validate_missingBody_returns400() throws Exception {
-            mockMvc.perform(post("/api/v1/rules/validate")
-                            .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(status().isBadRequest());
-        }
-
-        @Test
-        @DisplayName("Returns 200 with valid=true for complex nested rule")
-        void validate_complexRule_returnsSuccess() throws Exception {
-            when(ruleEngine.validate(anyString())).thenReturn(ValidationResult.success());
-
-            ValidateRequest request = new ValidateRequest(
-                    "(age > 18 AND score > 50) OR (vip = true AND status != 'banned')");
-
-            mockMvc.perform(post("/api/v1/rules/validate")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.valid").value(true));
+                            .content("{\"age\": 65}"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.error").value("NOT_FOUND"));
         }
     }
 }

@@ -4,14 +4,13 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.rulex.dto.RuleResponse;
 import com.rulex.engine.CompiledRule;
 import com.rulex.entity.RuleEntity;
-import com.rulex.exception.NamedRuleNotFoundException;
+import com.rulex.exception.RuleNotFoundException;
 import com.rulex.mapper.RuleMapper;
 import com.rulex.repository.RuleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.Collection;
 import java.util.Optional;
 
@@ -25,19 +24,16 @@ public class RuleService {
 
     @Transactional
     public RuleResponse create(RuleResponse dto) {
-        Instant now = Instant.now();
-        RuleEntity entity = new RuleEntity(dto.name(), dto.expression(), dto.description(), now, now);
+        RuleEntity entity = ruleMapper.toEntity(dto);
         return ruleMapper.toRuleResponse(ruleRepository.save(entity));
     }
 
     @Transactional
     public RuleResponse update(String name, RuleResponse dto) {
-        RuleEntity existing = ruleRepository.findByName(name)
-                .orElseThrow(() -> new NamedRuleNotFoundException(name));
+        RuleEntity existing = ruleRepository.findByName(name).orElseThrow(() -> new RuleNotFoundException(name));
         ruleCache.invalidate(existing.getExpression());
         existing.setExpression(dto.expression());
         existing.setDescription(dto.description());
-        existing.setUpdatedAt(Instant.now());
         return ruleMapper.toRuleResponse(ruleRepository.save(existing));
     }
 
@@ -52,13 +48,12 @@ public class RuleService {
     }
 
     @Transactional
-    public boolean delete(String name) {
+    public boolean deleteByName(String name) {
         return ruleRepository.findByName(name)
                 .map(entity -> {
                     ruleCache.invalidate(entity.getExpression());
                     ruleRepository.delete(entity);
                     return true;
-                })
-                .orElse(false);
+                }).orElse(false);
     }
 }
