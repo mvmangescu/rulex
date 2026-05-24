@@ -21,7 +21,7 @@ public class TrimFunction implements RuleFunction {
         if (args.size() != 1) {
             throw new RuleEvaluationException("Function 'trim' requires exactly 1 argument, got " + args.size());
         }
-        RuleValue arg = args.get(0);
+        RuleValue arg = args.getFirst();
         if (arg.isNull()) {
             throw new RuleEvaluationException("Function 'trim' does not accept null");
         }

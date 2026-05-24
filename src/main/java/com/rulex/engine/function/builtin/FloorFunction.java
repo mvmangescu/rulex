@@ -21,7 +21,7 @@ public class FloorFunction implements RuleFunction {
         if (args.size() != 1) {
             throw new RuleEvaluationException("Function 'floor' requires exactly 1 argument, got " + args.size());
         }
-        RuleValue arg = args.get(0);
+        RuleValue arg = args.getFirst();
         if (!arg.isNumeric()) {
             throw new RuleEvaluationException("Function 'floor' requires a numeric argument, got: " + arg.getRaw());
         }
