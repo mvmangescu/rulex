@@ -35,7 +35,6 @@ rulex:
   cache-ttl-seconds: 3600
   max-expression-length: 4096
   max-evaluation-steps: 10000
-  max-batch-size: 50
 
 management:
   endpoints:

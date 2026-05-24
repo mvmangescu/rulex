@@ -23,7 +23,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/rules")
-@Tag(name = "Rule Engine", description = "Stateless rule expression evaluation and validation")
+@Tag(name = "Rule engine", description = "Stateless rule expression evaluation and validation")
 public class RuleEngineController {
 
     private final RuleEngine ruleEngine;
