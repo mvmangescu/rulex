@@ -1,5 +1,7 @@
 package com.rulex.engine;
 
+import com.rulex.engine.RuleEngine.TraceResult;
+import com.rulex.engine.RuleEngine.ValidationResult;
 import com.rulex.exception.RuleEvaluationException;
 import com.rulex.exception.RuleParseException;
 import org.junit.jupiter.api.DisplayName;
@@ -683,7 +685,7 @@ class RuleEngineTest {
         @Test
         @DisplayName("COMPARISON produces leaf node with evaluated text")
         void comparison_producesLeafNode() {
-            RuleEngine.TraceResult result = ruleEngine.evaluateWithTrace("age > 18", Map.of("age", 25));
+            TraceResult result = ruleEngine.evaluateWithTrace("age > 18", Map.of("age", 25));
             assertThat(result.result()).isTrue();
             assertThat(result.trace().type()).isEqualTo("COMPARISON");
             assertThat(result.trace().evaluated()).contains(">");
@@ -693,7 +695,7 @@ class RuleEngineTest {
         @Test
         @DisplayName("AND produces compound node with two children")
         void and_producesCompoundNode() {
-            RuleEngine.TraceResult result = ruleEngine.evaluateWithTrace(
+            TraceResult result = ruleEngine.evaluateWithTrace(
                     "age > 18 AND active = true", Map.of("age", 25, "active", true));
             assertThat(result.trace().type()).isEqualTo("AND");
             assertThat(result.trace().children()).hasSize(2)
@@ -703,7 +705,7 @@ class RuleEngineTest {
         @Test
         @DisplayName("OR evaluates both branches in trace regardless of short-circuit")
         void or_traceIncludesBothBranches() {
-            RuleEngine.TraceResult result = ruleEngine.evaluateWithTrace(
+            TraceResult result = ruleEngine.evaluateWithTrace(
                     "age > 18 OR score > 100", Map.of("age", 25, "score", 50));
             assertThat(result.trace().type()).isEqualTo("OR");
             assertThat(result.trace().children()).hasSize(2);
@@ -712,7 +714,7 @@ class RuleEngineTest {
         @Test
         @DisplayName("NOT produces NOT node wrapping child")
         void not_producesNotNode() {
-            RuleEngine.TraceResult result = ruleEngine.evaluateWithTrace(
+            TraceResult result = ruleEngine.evaluateWithTrace(
                     "NOT active = true", Map.of("active", false));
             assertThat(result.result()).isTrue();
             assertThat(result.trace().type()).isEqualTo("NOT");
@@ -723,7 +725,7 @@ class RuleEngineTest {
         @Test
         @DisplayName("IN produces IN leaf node")
         void in_producesInNode() {
-            RuleEngine.TraceResult result = ruleEngine.evaluateWithTrace(
+            TraceResult result = ruleEngine.evaluateWithTrace(
                     "status IN ('A', 'B')", Map.of("status", "A"));
             assertThat(result.result()).isTrue();
             assertThat(result.trace().type()).isEqualTo("IN");
@@ -732,7 +734,7 @@ class RuleEngineTest {
         @Test
         @DisplayName("NOT IN produces NOT_IN leaf node")
         void notIn_producesNotInNode() {
-            RuleEngine.TraceResult result = ruleEngine.evaluateWithTrace(
+            TraceResult result = ruleEngine.evaluateWithTrace(
                     "status NOT IN ('A', 'B')", Map.of("status", "C"));
             assertThat(result.result()).isTrue();
             assertThat(result.trace().type()).isEqualTo("NOT_IN");
@@ -741,7 +743,7 @@ class RuleEngineTest {
         @Test
         @DisplayName("CONTAINS produces CONTAINS leaf node")
         void contains_producesContainsNode() {
-            RuleEngine.TraceResult result = ruleEngine.evaluateWithTrace(
+            TraceResult result = ruleEngine.evaluateWithTrace(
                     "name CONTAINS 'oh'", Map.of("name", "John"));
             assertThat(result.result()).isTrue();
             assertThat(result.trace().type()).isEqualTo("CONTAINS");
@@ -750,7 +752,7 @@ class RuleEngineTest {
         @Test
         @DisplayName("IS NULL produces IS_NULL leaf node")
         void isNull_producesIsNullNode() {
-            RuleEngine.TraceResult result = ruleEngine.evaluateWithTrace("email IS NULL", Map.of());
+            TraceResult result = ruleEngine.evaluateWithTrace("email IS NULL", Map.of());
             assertThat(result.result()).isTrue();
             assertThat(result.trace().type()).isEqualTo("IS_NULL");
         }
@@ -758,7 +760,7 @@ class RuleEngineTest {
         @Test
         @DisplayName("IS NOT NULL produces IS_NOT_NULL leaf node")
         void isNotNull_producesIsNotNullNode() {
-            RuleEngine.TraceResult result = ruleEngine.evaluateWithTrace(
+            TraceResult result = ruleEngine.evaluateWithTrace(
                     "email IS NOT NULL", Map.of("email", "x"));
             assertThat(result.result()).isTrue();
             assertThat(result.trace().type()).isEqualTo("IS_NOT_NULL");
@@ -767,7 +769,7 @@ class RuleEngineTest {
         @Test
         @DisplayName("IS NUMERIC produces IS_NUMERIC leaf node")
         void isNumeric_producesIsNumericNode() {
-            RuleEngine.TraceResult result = ruleEngine.evaluateWithTrace(
+            TraceResult result = ruleEngine.evaluateWithTrace(
                     "value IS NUMERIC", Map.of("value", 42));
             assertThat(result.result()).isTrue();
             assertThat(result.trace().type()).isEqualTo("IS_NUMERIC");
@@ -776,7 +778,7 @@ class RuleEngineTest {
         @Test
         @DisplayName("Boolean literal produces BOOL_LITERAL leaf node")
         void boolLiteral_producesBoolLiteralNode() {
-            RuleEngine.TraceResult result = ruleEngine.evaluateWithTrace("true", Map.of());
+            TraceResult result = ruleEngine.evaluateWithTrace("true", Map.of());
             assertThat(result.result()).isTrue();
             assertThat(result.trace().type()).isEqualTo("BOOL_LITERAL");
         }
@@ -784,7 +786,7 @@ class RuleEngineTest {
         @Test
         @DisplayName("Function inside comparison produces COMPARISON node")
         void functionInComparison_producesComparisonNode() {
-            RuleEngine.TraceResult result = ruleEngine.evaluateWithTrace(
+            TraceResult result = ruleEngine.evaluateWithTrace(
                     "length(name) > 3", Map.of("name", "John"));
             assertThat(result.result()).isTrue();
             assertThat(result.trace().type()).isEqualTo("COMPARISON");
@@ -795,7 +797,7 @@ class RuleEngineTest {
         void traceResult_matchesEvaluate() {
             Map<String, Object> ctx = Map.of("age", 10, "active", true);
             boolean direct = ruleEngine.evaluate("age > 18 AND active = true", ctx);
-            RuleEngine.TraceResult traced = ruleEngine.evaluateWithTrace("age > 18 AND active = true", ctx);
+            TraceResult traced = ruleEngine.evaluateWithTrace("age > 18 AND active = true", ctx);
             assertThat(traced.result()).isEqualTo(direct);
         }
     }
@@ -807,7 +809,7 @@ class RuleEngineTest {
         @Test
         @DisplayName("Valid rule returns valid=true with no error")
         void validRule_returnsSuccess() {
-            RuleEngine.ValidationResult result = ruleEngine.validate("age > 18 AND active = true");
+            ValidationResult result = ruleEngine.validate("age > 18 AND active = true");
             assertThat(result.valid()).isTrue();
             assertThat(result.error()).isNull();
         }
@@ -816,7 +818,7 @@ class RuleEngineTest {
         @ValueSource(strings = {"age >>> 18", "", "age >"})
         @DisplayName("Invalid expressions return valid=false with error message")
         void invalidRule_returnsFailure(String expression) {
-            RuleEngine.ValidationResult result = ruleEngine.validate(expression);
+            ValidationResult result = ruleEngine.validate(expression);
             assertThat(result.valid()).isFalse();
             assertThat(result.error()).isNotBlank();
         }
