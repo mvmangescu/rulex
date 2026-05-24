@@ -21,9 +21,11 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: none
     show-sql: false
     open-in-view: false
+  liquibase:
+    change-log: classpath:/db/changelog/db.changelog-master.yaml
   h2:
     console:
       enabled: false
