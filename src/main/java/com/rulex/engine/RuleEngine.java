@@ -1,9 +1,9 @@
 package com.rulex.engine;
 
 import com.rulex.config.RuleEngineProperties;
+import com.rulex.engine.function.FunctionRegistry;
 import com.rulex.exception.RuleEvaluationException;
 import com.rulex.exception.RuleParseException;
-import com.rulex.engine.function.FunctionRegistry;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +12,6 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
-import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -98,7 +97,7 @@ public class RuleEngine {
             throw e;
         } catch (Exception e) {
             outcome = "error";
-            log.error("Unexpected {} error [requestId={}]: {}", operation, MDC.get("requestId"), e.getMessage(), e);
+            log.error("Unexpected {} error: {}", operation, e.getMessage(), e);
             throw new RuleEvaluationException("Unexpected " + operation + " error: " + e.getMessage(), e);
         } finally {
             sample.stop(Timer.builder(METRIC_EVALUATE).tag("outcome", outcome).register(meterRegistry));
