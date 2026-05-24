@@ -1,9 +1,10 @@
 package com.rulex.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.rulex.dto.RuleDto;
+import com.rulex.dto.RuleResponse;
 import com.rulex.engine.CompiledRule;
 import com.rulex.entity.RuleEntity;
+import com.rulex.exception.NamedRuleNotFoundException;
 import com.rulex.mapper.RuleMapper;
 import com.rulex.repository.RuleRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,30 +24,31 @@ public class RuleService {
     private final RuleMapper ruleMapper;
 
     @Transactional
-    public RuleDto save(RuleDto dto) {
-        return ruleRepository.findByName(dto.name())
-                .map(existing -> {
-                    ruleCache.invalidate(existing.getExpression());
-                    existing.setExpression(dto.expression());
-                    existing.setDescription(dto.description());
-                    existing.setUpdatedAt(Instant.now());
-                    return ruleMapper.toDto(ruleRepository.save(existing));
-                })
-                .orElseGet(() -> {
-                    Instant now = Instant.now();
-                    RuleEntity entity = new RuleEntity(dto.name(), dto.expression(), dto.description(), now, now);
-                    return ruleMapper.toDto(ruleRepository.save(entity));
-                });
+    public RuleResponse create(RuleResponse dto) {
+        Instant now = Instant.now();
+        RuleEntity entity = new RuleEntity(dto.name(), dto.expression(), dto.description(), now, now);
+        return ruleMapper.toRuleResponse(ruleRepository.save(entity));
+    }
+
+    @Transactional
+    public RuleResponse update(String name, RuleResponse dto) {
+        RuleEntity existing = ruleRepository.findByName(name)
+                .orElseThrow(() -> new NamedRuleNotFoundException(name));
+        ruleCache.invalidate(existing.getExpression());
+        existing.setExpression(dto.expression());
+        existing.setDescription(dto.description());
+        existing.setUpdatedAt(Instant.now());
+        return ruleMapper.toRuleResponse(ruleRepository.save(existing));
     }
 
     @Transactional(readOnly = true)
-    public Optional<RuleDto> find(String name) {
-        return ruleRepository.findByName(name).map(ruleMapper::toDto);
+    public Optional<RuleResponse> findByName(String name) {
+        return ruleRepository.findByName(name).map(ruleMapper::toRuleResponse);
     }
 
     @Transactional(readOnly = true)
-    public Collection<RuleDto> findAll() {
-        return ruleRepository.findAll().stream().map(ruleMapper::toDto).toList();
+    public Collection<RuleResponse> findAll() {
+        return ruleRepository.findAll().stream().map(ruleMapper::toRuleResponse).toList();
     }
 
     @Transactional

@@ -1,10 +1,10 @@
 package com.rulex.dto;
 
-import java.util.Map;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+
+import java.util.Map;
 
 public record EvaluateRequest(
         @NotBlank(message = "Rule expression must not be blank")
@@ -12,5 +12,5 @@ public record EvaluateRequest(
         String rule,
 
         @NotNull(message = "Context must not be null")
-        Map<String, Object> context
-) {}
+        Map<String, Object> context) {
+}
