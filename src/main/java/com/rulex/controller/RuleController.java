@@ -1,7 +1,9 @@
 package com.rulex.controller;
 
+import com.rulex.dto.CreateRuleRequest;
 import com.rulex.dto.EvaluateResponse;
 import com.rulex.dto.RuleResponse;
+import com.rulex.dto.UpdateRuleRequest;
 import com.rulex.engine.RuleEngine;
 import com.rulex.exception.RuleNotFoundException;
 import com.rulex.service.RuleService;
@@ -43,7 +45,7 @@ public class RuleController {
     @ApiResponse(responseCode = "400", description = "Validation error", content = @Content)
     @ApiResponse(responseCode = "409", description = "Rule name already exists", content = @Content)
     @PostMapping
-    public ResponseEntity<RuleResponse> create(@Valid @RequestBody RuleResponse request) {
+    public ResponseEntity<RuleResponse> create(@Valid @RequestBody CreateRuleRequest request) {
         log.info("Creating rule '{}'", request.name());
         RuleResponse created = ruleService.create(request);
         return ResponseEntity.created(URI.create("/api/v1/rules/" + created.name())).body(created);
@@ -56,7 +58,7 @@ public class RuleController {
     @PutMapping("/{name}")
     public ResponseEntity<RuleResponse> update(
             @Parameter(description = "Rule name") @PathVariable @NotBlank @Size(max = 256) String name,
-            @Valid @RequestBody RuleResponse request) {
+            @Valid @RequestBody UpdateRuleRequest request) {
         log.info("Updating rule '{}'", name);
         return ResponseEntity.ok(ruleService.update(name, request));
     }

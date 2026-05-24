@@ -100,6 +100,6 @@ STRING_LIT
     | '"'  ( ~["\r\n]           )* '"'
     ;
 
-IDENTIFIER : [a-zA-Z_] [a-zA-Z0-9_]* ;
+IDENTIFIER : [a-z_] [a-z0-9_]* ;
 
 WS : [ \t\r\n]+ -> skip ;

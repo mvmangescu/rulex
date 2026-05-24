@@ -1,7 +1,9 @@
 package com.rulex.web;
 
 import com.rulex.controller.RuleController;
+import com.rulex.dto.CreateRuleRequest;
 import com.rulex.dto.RuleResponse;
+import com.rulex.dto.UpdateRuleRequest;
 import com.rulex.engine.RuleEngine;
 import com.rulex.engine.RuleEngine.TraceResult;
 import com.rulex.engine.TraceNode;
@@ -49,7 +51,7 @@ class RuleControllerTest {
         @Test
         @DisplayName("Returns 201 with Location header when creating a new rule")
         void create_newRule_returns201() throws Exception {
-            when(ruleService.create(any(RuleResponse.class))).thenReturn(sampleRule());
+            when(ruleService.create(any(CreateRuleRequest.class))).thenReturn(sampleRule());
 
             mockMvc.perform(post("/api/v1/rules")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -81,7 +83,7 @@ class RuleControllerTest {
         @DisplayName("Returns 200 when updating an existing rule")
         void update_existingRule_returns200() throws Exception {
             RuleResponse updated = new RuleResponse(1L, "senior-check", "age > 65", null);
-            when(ruleService.update(anyString(), any(RuleResponse.class))).thenReturn(updated);
+            when(ruleService.update(anyString(), any(UpdateRuleRequest.class))).thenReturn(updated);
 
             mockMvc.perform(put("/api/v1/rules/senior-check")
                             .contentType(MediaType.APPLICATION_JSON)

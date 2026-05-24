@@ -3,8 +3,7 @@ package com.rulex.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public record RuleResponse(
-        Long id,
+public record CreateRuleRequest(
 
         @NotBlank
         @Size(max = 256)
@@ -14,5 +13,6 @@ public record RuleResponse(
         @Size(max = 4096)
         String expression,
 
+        @Size(max = 1024)
         String description) {
 }

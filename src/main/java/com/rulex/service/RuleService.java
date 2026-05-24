@@ -1,7 +1,9 @@
 package com.rulex.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.rulex.dto.CreateRuleRequest;
 import com.rulex.dto.RuleResponse;
+import com.rulex.dto.UpdateRuleRequest;
 import com.rulex.engine.CompiledRule;
 import com.rulex.entity.RuleEntity;
 import com.rulex.exception.RuleNotFoundException;
@@ -23,16 +25,16 @@ public class RuleService {
     private final RuleMapper ruleMapper;
 
     @Transactional
-    public RuleResponse create(RuleResponse dto) {
-        RuleEntity entity = ruleMapper.toEntity(dto);
+    public RuleResponse create(CreateRuleRequest request) {
+        RuleEntity entity = ruleMapper.toEntity(request);
         return ruleMapper.toRuleResponse(ruleRepository.save(entity));
     }
 
     @Transactional
-    public RuleResponse update(String name, RuleResponse dto) {
+    public RuleResponse update(String name, UpdateRuleRequest request) {
         RuleEntity existing = ruleRepository.findByName(name).orElseThrow(() -> new RuleNotFoundException(name));
         ruleCache.invalidate(existing.getExpression());
-        ruleMapper.applyNonNull(dto, existing);
+        ruleMapper.applyNonNull(request, existing);
         return ruleMapper.toRuleResponse(ruleRepository.save(existing));
     }
 
