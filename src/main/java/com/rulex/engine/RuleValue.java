@@ -18,8 +18,7 @@ public final class RuleValue {
 
     public static RuleValue of(Object value) {
         if (value == null) return NULL;
-        if (Boolean.TRUE.equals(value)) return TRUE;
-        if (Boolean.FALSE.equals(value)) return FALSE;
+        if (value instanceof Boolean) return Boolean.TRUE.equals(value) ? TRUE : FALSE;
         return new RuleValue(value);
     }
 
@@ -63,7 +62,7 @@ public final class RuleValue {
     }
 
     public boolean asBoolean() {
-        if (raw instanceof Boolean b) return b;
+        if (raw instanceof Boolean) return Boolean.TRUE.equals(raw);
         throw new RuleEvaluationException(
                 "Cannot convert value of type " + (raw == null ? "null" : raw.getClass().getName()) + " to boolean");
     }
