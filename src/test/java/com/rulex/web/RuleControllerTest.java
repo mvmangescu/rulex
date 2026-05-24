@@ -129,7 +129,8 @@ class RuleControllerTest {
             when(ruleService.findById(99L)).thenReturn(Optional.empty());
 
             mockMvc.perform(get("/api/v1/rules/99"))
-                    .andExpect(status().isNotFound());
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.error").value("NOT_FOUND"));
         }
     }
 
@@ -182,7 +183,8 @@ class RuleControllerTest {
             when(ruleService.deleteById(99L)).thenReturn(false);
 
             mockMvc.perform(delete("/api/v1/rules/99"))
-                    .andExpect(status().isNotFound());
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.error").value("NOT_FOUND"));
         }
     }
 

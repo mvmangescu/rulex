@@ -40,7 +40,7 @@ public class RuleController {
     @ApiResponse(responseCode = "201", description = "Rule created",
             headers = @Header(name = "Location", description = "URL of the created rule",
                     schema = @Schema(type = "string")))
-    @ApiResponse(responseCode = "400", description = "Validation error", content = @Content)
+    @ApiResponse(responseCode = "400", description = "Validation error or invalid expression", content = @Content)
     @ApiResponse(responseCode = "409", description = "Rule name already exists", content = @Content)
     @PostMapping
     public ResponseEntity<RuleResponse> create(@Valid @RequestBody CreateRuleRequest request) {
@@ -49,9 +49,9 @@ public class RuleController {
         return ResponseEntity.created(URI.create("/api/v1/rules/" + created.id())).body(created);
     }
 
-    @Operation(summary = "Update a rule", description = "Returns 404 if the rule does not exist.")
+    @Operation(summary = "Update a rule", description = "Partial update — omitted fields are left unchanged.")
     @ApiResponse(responseCode = "200", description = "Rule updated")
-    @ApiResponse(responseCode = "400", description = "Validation error", content = @Content)
+    @ApiResponse(responseCode = "400", description = "Validation error or invalid expression", content = @Content)
     @ApiResponse(responseCode = "404", description = "Rule not found", content = @Content)
     @PutMapping("/{id}")
     public ResponseEntity<RuleResponse> update(
@@ -67,7 +67,7 @@ public class RuleController {
     @GetMapping("/{id}")
     public ResponseEntity<RuleResponse> findById(
             @Parameter(description = "Rule id") @PathVariable Long id) {
-        return ruleService.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(ruleService.findById(id).orElseThrow(() -> new RuleNotFoundException(id)));
     }
 
     @Operation(summary = "List all rules")
@@ -84,29 +84,32 @@ public class RuleController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteById(
             @Parameter(description = "Rule id") @PathVariable Long id) {
-        if (ruleService.deleteById(id)) {
-            log.info("Deleted rule id={}", id);
-            return ResponseEntity.noContent().build();
+        if (!ruleService.deleteById(id)) {
+            throw new RuleNotFoundException(id);
         }
-        return ResponseEntity.notFound().build();
+        log.info("Deleted rule id={}", id);
+        return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Evaluate a rule against a context",
+    @Operation(summary = "Evaluate a stored rule against a context",
             description = "Looks up the rule by id then evaluates it. Pass ?explain=true for a full execution trace.")
     @ApiResponse(responseCode = "200", description = "Rule evaluated successfully")
+    @ApiResponse(responseCode = "400", description = "Expression parse error", content = @Content)
     @ApiResponse(responseCode = "404", description = "Rule not found", content = @Content)
+    @ApiResponse(responseCode = "422", description = "Evaluation error", content = @Content)
     @PostMapping("/{id}/evaluate")
     public ResponseEntity<EvaluateResponse> evaluate(
             @Parameter(description = "Rule id") @PathVariable Long id,
-            @RequestBody Map<String, Object> context,
-            @Parameter(description = "Return full execution trace") @RequestParam(required = false, defaultValue = "false") boolean explain) {
+            @RequestBody(required = false) Map<String, Object> context,
+            @Parameter(description = "Return full execution trace")
+            @RequestParam(required = false, defaultValue = "false") boolean explain) {
         RuleResponse rule = ruleService.findById(id).orElseThrow(() -> new RuleNotFoundException(id));
+        Map<String, Object> ctx = context != null ? context : Map.of();
         log.info("Evaluating rule id={}, explain={}", id, explain);
         if (explain) {
-            RuleEngine.TraceResult traced = ruleEngine.evaluateWithTrace(rule.expression(), context);
+            RuleEngine.TraceResult traced = ruleEngine.evaluateWithTrace(rule.expression(), ctx);
             return ResponseEntity.ok(EvaluateResponse.withTrace(traced.result(), rule.expression(), traced.trace()));
         }
-        boolean result = ruleEngine.evaluate(rule.expression(), context);
-        return ResponseEntity.ok(EvaluateResponse.of(result, rule.expression()));
+        return ResponseEntity.ok(EvaluateResponse.of(ruleEngine.evaluate(rule.expression(), ctx), rule.expression()));
     }
 }
