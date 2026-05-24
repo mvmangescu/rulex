@@ -41,8 +41,6 @@ class RuleEngineControllerTest {
     @MockBean
     RuleEngine ruleEngine;
 
-    // ── POST /evaluate ────────────────────────────────────────────────────────
-
     @Nested
     @DisplayName("POST /api/v1/rules/evaluate")
     class EvaluateEndpoint {
@@ -148,8 +146,6 @@ class RuleEngineControllerTest {
                     .andExpect(jsonPath("$.trace").doesNotExist());
         }
     }
-
-    // ── POST /validate ────────────────────────────────────────────────────────
 
     @Nested
     @DisplayName("POST /api/v1/rules/validate")

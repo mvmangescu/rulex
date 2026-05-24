@@ -42,8 +42,6 @@ class RuleControllerTest {
         return new RuleResponse(1L, "senior-check", "age > 60", null);
     }
 
-    // ── POST /api/v1/rules ────────────────────────────────────────────────────
-
     @Nested
     @DisplayName("POST /api/v1/rules")
     class CreateEndpoint {
@@ -72,8 +70,6 @@ class RuleControllerTest {
                     .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
         }
     }
-
-    // ── PUT /api/v1/rules/{id} ────────────────────────────────────────────────
 
     @Nested
     @DisplayName("PUT /api/v1/rules/{id}")
@@ -106,8 +102,6 @@ class RuleControllerTest {
         }
     }
 
-    // ── GET /api/v1/rules/{id} ────────────────────────────────────────────────
-
     @Nested
     @DisplayName("GET /api/v1/rules/{id}")
     class GetEndpoint {
@@ -133,8 +127,6 @@ class RuleControllerTest {
                     .andExpect(jsonPath("$.error").value("NOT_FOUND"));
         }
     }
-
-    // ── GET /api/v1/rules ─────────────────────────────────────────────────────
 
     @Nested
     @DisplayName("GET /api/v1/rules")
@@ -162,8 +154,6 @@ class RuleControllerTest {
         }
     }
 
-    // ── DELETE /api/v1/rules/{id} ─────────────────────────────────────────────
-
     @Nested
     @DisplayName("DELETE /api/v1/rules/{id}")
     class DeleteEndpoint {
@@ -187,8 +177,6 @@ class RuleControllerTest {
                     .andExpect(jsonPath("$.error").value("NOT_FOUND"));
         }
     }
-
-    // ── POST /api/v1/rules/{id}/evaluate ─────────────────────────────────────
 
     @Nested
     @DisplayName("POST /api/v1/rules/{id}/evaluate")

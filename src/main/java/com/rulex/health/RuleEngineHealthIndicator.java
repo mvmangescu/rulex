@@ -7,6 +7,8 @@ import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.stereotype.Component;
 
+import java.util.Set;
+
 @Component
 public class RuleEngineHealthIndicator implements HealthIndicator {
 
@@ -22,15 +24,14 @@ public class RuleEngineHealthIndicator implements HealthIndicator {
     @Override
     public Health health() {
         try {
+            Set<String> functions = functionRegistry.getFunctionNames();
             return Health.up()
-                    .withDetail("registeredFunctions", functionRegistry.getFunctionNames().size())
-                    .withDetail("availableFunctions", functionRegistry.getFunctionNames())
+                    .withDetail("functions", functions)
+                    .withDetail("functionCount", functions.size())
                     .withDetail("cachedRules", ruleCache.estimatedSize())
                     .build();
         } catch (Exception ex) {
-            return Health.down(ex)
-                    .withDetail("error", ex.getMessage())
-                    .build();
+            return Health.down(ex).build();
         }
     }
 }

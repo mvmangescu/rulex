@@ -1,19 +1,17 @@
 package com.rulex.config;
 
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.rulex.engine.CompiledRule;
 import com.rulex.engine.function.FunctionRegistry;
 import com.rulex.engine.function.RuleFunction;
-
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Configuration
 public class RuleEngineConfig {
@@ -32,9 +30,7 @@ public class RuleEngineConfig {
     @Bean
     public FunctionRegistry functionRegistry(List<RuleFunction> functions) {
         FunctionRegistry registry = new FunctionRegistry();
-        for (RuleFunction fn : functions) {
-            registry.register(fn);
-        }
+        functions.forEach(registry::register);
         return registry;
     }
 }

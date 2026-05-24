@@ -8,7 +8,6 @@ public class RuleParseException extends RuntimeException {
     private final String expression;
     private final int line;
     private final int charPosition;
-    private final String msg;
 
     public RuleParseException(String expression, int line, int charPosition, String msg) {
         super(String.format("Parse error in expression [%s] at line %d:%d — %s",
@@ -16,6 +15,5 @@ public class RuleParseException extends RuntimeException {
         this.expression = expression;
         this.line = line;
         this.charPosition = charPosition;
-        this.msg = msg;
     }
 }

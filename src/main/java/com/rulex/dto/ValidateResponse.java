@@ -1,7 +1,9 @@
 package com.rulex.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "Result of validating a rule expression")
 public record ValidateResponse(
 
