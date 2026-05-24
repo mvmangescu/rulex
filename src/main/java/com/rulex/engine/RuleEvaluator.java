@@ -15,11 +15,8 @@ import java.util.List;
 public class RuleEvaluator extends RuleBaseVisitor<RuleValue> {
 
     private final EvaluationContext ctx;
-
     private final FunctionRegistry registry;
-
     private final int maxSteps;
-
     private int stepCount = 0;
 
     public RuleEvaluator(EvaluationContext ctx, FunctionRegistry registry, int maxSteps) {
@@ -37,14 +34,10 @@ public class RuleEvaluator extends RuleBaseVisitor<RuleValue> {
         return super.visit(tree);
     }
 
-    // ── Entry point ───────────────────────────────────────────────────────────
-
     @Override
     public RuleValue visitProgram(RuleParser.ProgramContext ctx) {
         return visit(ctx.expr());
     }
-
-    // ── Boolean logic ─────────────────────────────────────────────────────────
 
     @Override
     public RuleValue visitOrExpr(RuleParser.OrExprContext ctx) {
@@ -67,8 +60,6 @@ public class RuleEvaluator extends RuleBaseVisitor<RuleValue> {
     public RuleValue visitGroupExpr(RuleParser.GroupExprContext ctx) {
         return visit(ctx.expr());
     }
-
-    // ── Predicates ────────────────────────────────────────────────────────────
 
     @Override
     public RuleValue visitComparisonPred(RuleParser.ComparisonPredContext ctx) {
@@ -123,8 +114,6 @@ public class RuleEvaluator extends RuleBaseVisitor<RuleValue> {
         return RuleValue.of("true".equalsIgnoreCase(ctx.BOOL_LIT().getText()));
     }
 
-    // ── Arithmetic ────────────────────────────────────────────────────────────
-
     @Override
     public RuleValue visitUnaryMinus(RuleParser.UnaryMinusContext ctx) {
         return RuleValue.of(-requireNumeric(visit(ctx.arith()), "unary -"));
@@ -157,7 +146,7 @@ public class RuleEvaluator extends RuleBaseVisitor<RuleValue> {
         double left = requireNumeric(visit(ctx.arith(0)), opStr);
         double right = requireNumeric(visit(ctx.arith(1)), opStr);
         return switch (opType) {
-            case RuleLexer.PLUS -> RuleValue.of(left + right);
+            case RuleLexer.PLUS  -> RuleValue.of(left + right);
             case RuleLexer.MINUS -> RuleValue.of(left - right);
             default -> throw new RuleEvaluationException("Unknown operator: " + opStr);
         };
@@ -183,16 +172,6 @@ public class RuleEvaluator extends RuleBaseVisitor<RuleValue> {
         return visit(ctx.literal());
     }
 
-    private double requireNumeric(RuleValue value, String operator) {
-        if (!value.isNumeric()) {
-            throw new RuleEvaluationException(
-                    "Operator '" + operator + "' requires numeric operands, got: " + value.getRaw());
-        }
-        return value.asDouble();
-    }
-
-    // ── Function calls ────────────────────────────────────────────────────────
-
     @Override
     public RuleValue visitFunctionCall(RuleParser.FunctionCallContext ctx) {
         String name = ctx.IDENTIFIER().getText();
@@ -203,15 +182,10 @@ public class RuleEvaluator extends RuleBaseVisitor<RuleValue> {
         return registry.execute(name, args, this.ctx);
     }
 
-    // ── Field references ──────────────────────────────────────────────────────
-
     @Override
     public RuleValue visitFieldRef(RuleParser.FieldRefContext ctx) {
-        String name = ctx.IDENTIFIER().getText();
-        return this.ctx.resolve(name);
+        return this.ctx.resolve(ctx.IDENTIFIER().getText());
     }
-
-    // ── Literals ──────────────────────────────────────────────────────────────
 
     @Override
     public RuleValue visitNumberLiteral(RuleParser.NumberLiteralContext ctx) {
@@ -228,14 +202,6 @@ public class RuleEvaluator extends RuleBaseVisitor<RuleValue> {
         return RuleValue.of(unquote(ctx.STRING_LIT().getText()));
     }
 
-    private static String unquote(String text) {
-        if (text == null || text.length() < 2) return text;
-        char quote = text.charAt(0);
-        String inner = text.substring(1, text.length() - 1);
-        if (quote == '\'') inner = inner.replace("''", "'");
-        return inner;
-    }
-
     @Override
     public RuleValue visitBoolLiteral(RuleParser.BoolLiteralContext ctx) {
         return RuleValue.of("true".equalsIgnoreCase(ctx.BOOL_LIT().getText()));
@@ -244,5 +210,21 @@ public class RuleEvaluator extends RuleBaseVisitor<RuleValue> {
     @Override
     public RuleValue visitNullLiteral(RuleParser.NullLiteralContext ctx) {
         return RuleValue.NULL;
+    }
+
+    private double requireNumeric(RuleValue value, String operator) {
+        if (!value.isNumeric()) {
+            throw new RuleEvaluationException(
+                    "Operator '" + operator + "' requires numeric operands, got: " + value.getRaw());
+        }
+        return value.asDouble();
+    }
+
+    private static String unquote(String text) {
+        if (text == null || text.length() < 2) return text;
+        char quote = text.charAt(0);
+        String inner = text.substring(1, text.length() - 1);
+        if (quote == '\'') inner = inner.replace("''", "'");
+        return inner;
     }
 }

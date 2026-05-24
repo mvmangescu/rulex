@@ -7,14 +7,9 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import java.util.List;
 import java.util.function.Supplier;
 
-/**
- * Walks the parse tree and produces a TraceNode tree describing how the rule evaluated.
- * Each operand is evaluated exactly once — Predicates handles all comparison logic.
- */
 public class ExplainingEvaluator extends RuleBaseVisitor<TraceNode> {
 
     private final RuleEvaluator eval;
-
     private final String expression;
 
     public ExplainingEvaluator(RuleEvaluator eval, String expression) {
@@ -43,14 +38,10 @@ public class ExplainingEvaluator extends RuleBaseVisitor<TraceNode> {
         }
     }
 
-    // ── Entry point ───────────────────────────────────────────────────────────
-
     @Override
     public TraceNode visitProgram(RuleParser.ProgramContext ctx) {
         return visit(ctx.expr());
     }
-
-    // ── Boolean logic ─────────────────────────────────────────────────────────
 
     @Override
     public TraceNode visitOrExpr(RuleParser.OrExprContext ctx) {
@@ -76,8 +67,6 @@ public class ExplainingEvaluator extends RuleBaseVisitor<TraceNode> {
     public TraceNode visitGroupExpr(RuleParser.GroupExprContext ctx) {
         return visit(ctx.expr());
     }
-
-    // ── Predicates ────────────────────────────────────────────────────────────
 
     @Override
     public TraceNode visitComparisonPred(RuleParser.ComparisonPredContext ctx) {

@@ -17,7 +17,10 @@ public final class RuleValue {
     }
 
     public static RuleValue of(Object value) {
-        return value == null ? NULL : new RuleValue(value);
+        if (value == null) return NULL;
+        if (Boolean.TRUE.equals(value)) return TRUE;
+        if (Boolean.FALSE.equals(value)) return FALSE;
+        return new RuleValue(value);
     }
 
     public boolean isNull() {
@@ -42,17 +45,11 @@ public final class RuleValue {
 
     public double asDouble() {
         if (raw instanceof Number n) {
-            double d = n.doubleValue();
-            if (Double.isNaN(d)) throw new RuleEvaluationException("Numeric value is NaN");
-            if (Double.isInfinite(d)) throw new RuleEvaluationException("Numeric value is Infinite");
-            return d;
+            return validFinite(n.doubleValue());
         }
         if (raw instanceof String s) {
             try {
-                double d = Double.parseDouble(s);
-                if (Double.isNaN(d)) throw new RuleEvaluationException("Numeric value is NaN");
-                if (Double.isInfinite(d)) throw new RuleEvaluationException("Numeric value is Infinite");
-                return d;
+                return validFinite(Double.parseDouble(s));
             } catch (NumberFormatException e) {
                 throw new RuleEvaluationException("Cannot convert value to numeric: '" + s + "'");
             }
@@ -83,5 +80,11 @@ public final class RuleValue {
     @Override
     public String toString() {
         return "RuleValue{raw=" + raw + "}";
+    }
+
+    private static double validFinite(double d) {
+        if (Double.isNaN(d)) throw new RuleEvaluationException("Numeric value is NaN");
+        if (Double.isInfinite(d)) throw new RuleEvaluationException("Numeric value is Infinite");
+        return d;
     }
 }

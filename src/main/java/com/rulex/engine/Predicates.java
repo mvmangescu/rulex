@@ -6,7 +6,6 @@ import com.rulex.grammar.RuleLexer;
 import java.util.Collection;
 import java.util.List;
 
-/** Pure-function predicate logic shared by RuleEvaluator and ExplainingEvaluator. */
 final class Predicates {
 
     private Predicates() {}
@@ -31,15 +30,6 @@ final class Predicates {
         };
     }
 
-    /**
-     * Evaluates {@code left CONTAINS right}:
-     * <ul>
-     *   <li>String: substring check ({@code "hello" CONTAINS "ell"})</li>
-     *   <li>Collection: membership check ({@code tags CONTAINS 'java'})</li>
-     *   <li>Object array: membership check</li>
-     * </ul>
-     * Primitive arrays ({@code int[]}, {@code double[]}, etc.) are not supported — wrap in a List.
-     */
     static boolean contains(RuleValue left, RuleValue right) {
         if (left.isNull()) return false;
         Object lRaw = left.getRaw();

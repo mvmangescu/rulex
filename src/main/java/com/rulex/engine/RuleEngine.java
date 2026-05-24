@@ -6,14 +6,17 @@ import com.rulex.exception.RuleParseException;
 import com.rulex.function.FunctionRegistry;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.function.Supplier;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class RuleEngine {
 
     private static final String METRIC_EVALUATE = "rulex.evaluate.duration";
@@ -23,38 +26,24 @@ public class RuleEngine {
     private final MeterRegistry meterRegistry;
     private final RuleEngineProperties properties;
 
-    public RuleEngine(RuleCompiler compiler, FunctionRegistry functionRegistry,
-                      MeterRegistry meterRegistry, RuleEngineProperties properties) {
-        this.compiler = compiler;
-        this.functionRegistry = functionRegistry;
-        this.meterRegistry = meterRegistry;
-        this.properties = properties;
-    }
-
     public boolean evaluate(String rule, Map<String, Object> context) {
-        Timer.Sample sample = Timer.start(meterRegistry);
-        String outcome = "success";
-        try {
+        return measure("evaluation", () -> {
             log.debug("Evaluating rule, length={}", rule == null ? 0 : rule.length());
-            CompiledRule compiledRule = compiler.compile(rule);
-            EvaluationContext evalCtx = EvaluationContext.of(context);
-            RuleEvaluator evaluator = new RuleEvaluator(evalCtx, functionRegistry,
-                    properties.maxEvaluationSteps());
-            RuleValue result = evaluator.visit(compiledRule.tree());
+            CompiledRule compiled = compiler.compile(rule);
+            RuleValue result = evaluator(context).visit(compiled.tree());
             log.debug("Rule evaluated to: {}", result.getRaw());
             return result.asBoolean();
-        } catch (RuleParseException | RuleEvaluationException e) {
-            outcome = "failure";
-            throw e;
-        } catch (Exception e) {
-            outcome = "error";
-            log.error("Unexpected evaluation error [requestId={}]: {}", MDC.get("requestId"), e.getMessage(), e);
-            throw new RuleEvaluationException("Unexpected evaluation error: " + e.getMessage(), e);
-        } finally {
-            sample.stop(Timer.builder(METRIC_EVALUATE)
-                    .tag("outcome", outcome)
-                    .register(meterRegistry));
-        }
+        });
+    }
+
+    public TraceResult evaluateWithTrace(String rule, Map<String, Object> context) {
+        return measure("trace evaluation", () -> {
+            log.debug("Evaluating rule with trace, length={}", rule == null ? 0 : rule.length());
+            CompiledRule compiled = compiler.compile(rule);
+            RuleEvaluator valueEvaluator = evaluator(context);
+            TraceNode trace = new ExplainingEvaluator(valueEvaluator, rule).visit(compiled.tree());
+            return new TraceResult(trace.result(), trace);
+        });
     }
 
     public ValidationResult validate(String rule) {
@@ -70,29 +59,24 @@ public class RuleEngine {
         }
     }
 
-    public TraceResult evaluateWithTrace(String rule, Map<String, Object> context) {
+    private RuleEvaluator evaluator(Map<String, Object> context) {
+        return new RuleEvaluator(EvaluationContext.of(context), functionRegistry, properties.maxEvaluationSteps());
+    }
+
+    private <T> T measure(String operation, Supplier<T> action) {
         Timer.Sample sample = Timer.start(meterRegistry);
         String outcome = "success";
         try {
-            log.debug("Evaluating rule with trace, length={}", rule == null ? 0 : rule.length());
-            CompiledRule compiledRule = compiler.compile(rule);
-            EvaluationContext evalCtx = EvaluationContext.of(context);
-            RuleEvaluator valueEvaluator = new RuleEvaluator(evalCtx, functionRegistry,
-                    properties.maxEvaluationSteps());
-            ExplainingEvaluator explainer = new ExplainingEvaluator(valueEvaluator, rule);
-            TraceNode trace = explainer.visit(compiledRule.tree());
-            return new TraceResult(trace.result(), trace);
+            return action.get();
         } catch (RuleParseException | RuleEvaluationException e) {
             outcome = "failure";
             throw e;
         } catch (Exception e) {
             outcome = "error";
-            log.error("Unexpected trace evaluation error [requestId={}]: {}", MDC.get("requestId"), e.getMessage(), e);
-            throw new RuleEvaluationException("Unexpected evaluation error: " + e.getMessage(), e);
+            log.error("Unexpected {} error [requestId={}]: {}", operation, MDC.get("requestId"), e.getMessage(), e);
+            throw new RuleEvaluationException("Unexpected " + operation + " error: " + e.getMessage(), e);
         } finally {
-            sample.stop(Timer.builder(METRIC_EVALUATE)
-                    .tag("outcome", outcome)
-                    .register(meterRegistry));
+            sample.stop(Timer.builder(METRIC_EVALUATE).tag("outcome", outcome).register(meterRegistry));
         }
     }
 
