@@ -32,8 +32,7 @@ public class RuleService {
     public RuleResponse update(String name, RuleResponse dto) {
         RuleEntity existing = ruleRepository.findByName(name).orElseThrow(() -> new RuleNotFoundException(name));
         ruleCache.invalidate(existing.getExpression());
-        existing.setExpression(dto.expression());
-        existing.setDescription(dto.description());
+        ruleMapper.applyNonNull(dto, existing);
         return ruleMapper.toRuleResponse(ruleRepository.save(existing));
     }
 
