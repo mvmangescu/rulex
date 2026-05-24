@@ -69,6 +69,16 @@ public class ExplainingEvaluator extends RuleBaseVisitor<TraceNode> {
     }
 
     @Override
+    public TraceNode visitNotContainsPred(RuleParser.NotContainsPredContext ctx) {
+        return leaf(ctx, "NOT_CONTAINS", () -> {
+            RuleValue left = eval.visit(ctx.arith(0));
+            RuleValue right = eval.visit(ctx.arith(1));
+            return TraceNode.leaf(src(ctx), "NOT_CONTAINS", !Predicates.contains(left, right),
+                    left.asString() + " not contains " + right.asString());
+        });
+    }
+
+    @Override
     public TraceNode visitIsNullPred(RuleParser.IsNullPredContext ctx) {
         return leaf(ctx, "IS_NULL", () -> {
             RuleValue val = eval.visit(ctx.arith());

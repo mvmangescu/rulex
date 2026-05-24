@@ -1,7 +1,7 @@
 package com.rulex.engine;
 
-import com.rulex.exception.RuleEvaluationException;
 import com.rulex.engine.function.FunctionRegistry;
+import com.rulex.exception.RuleEvaluationException;
 import com.rulex.grammar.RuleBaseVisitor;
 import com.rulex.grammar.RuleLexer;
 import com.rulex.grammar.RuleParser;
@@ -70,6 +70,11 @@ public class RuleEvaluator extends RuleBaseVisitor<RuleValue> {
     @Override
     public RuleValue visitContainsPred(RuleParser.ContainsPredContext ctx) {
         return RuleValue.of(Predicates.contains(visit(ctx.arith(0)), visit(ctx.arith(1))));
+    }
+
+    @Override
+    public RuleValue visitNotContainsPred(RuleParser.NotContainsPredContext ctx) {
+        return RuleValue.of(!Predicates.contains(visit(ctx.arith(0)), visit(ctx.arith(1))));
     }
 
     @Override
@@ -146,7 +151,7 @@ public class RuleEvaluator extends RuleBaseVisitor<RuleValue> {
         double left = requireNumeric(visit(ctx.arith(0)), opStr);
         double right = requireNumeric(visit(ctx.arith(1)), opStr);
         return switch (opType) {
-            case RuleLexer.PLUS  -> RuleValue.of(left + right);
+            case RuleLexer.PLUS -> RuleValue.of(left + right);
             case RuleLexer.MINUS -> RuleValue.of(left - right);
             default -> throw new RuleEvaluationException("Unknown operator: " + opStr);
         };

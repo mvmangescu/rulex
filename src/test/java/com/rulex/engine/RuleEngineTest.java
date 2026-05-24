@@ -289,6 +289,46 @@ class RuleEngineTest {
     }
 
     @Nested
+    @DisplayName("NOT CONTAINS operator")
+    class NotContainsOperator {
+
+        @Test
+        @DisplayName("String NOT CONTAINS substring — true when absent")
+        void stringNotContains_true() {
+            assertThat(ruleEngine.evaluate("name NOT CONTAINS 'xyz'", Map.of("name", "John"))).isTrue();
+        }
+
+        @Test
+        @DisplayName("String NOT CONTAINS substring — false when present")
+        void stringNotContains_false() {
+            assertThat(ruleEngine.evaluate("name NOT CONTAINS 'oh'", Map.of("name", "John"))).isFalse();
+        }
+
+        @Test
+        @DisplayName("Collection NOT CONTAINS element — true when absent")
+        void listNotContains_true() {
+            assertThat(ruleEngine.evaluate("tags NOT CONTAINS 'python'",
+                    Map.of("tags", List.of("java", "spring")))).isTrue();
+        }
+
+        @Test
+        @DisplayName("Collection NOT CONTAINS element — false when present")
+        void listNotContains_false() {
+            assertThat(ruleEngine.evaluate("tags NOT CONTAINS 'java'",
+                    Map.of("tags", List.of("java", "spring")))).isFalse();
+        }
+
+        @Test
+        @DisplayName("NOT CONTAINS produces NOT_CONTAINS trace node")
+        void notContains_producesNotContainsNode() {
+            RuleEngine.TraceResult result = ruleEngine.evaluateWithTrace(
+                    "name NOT CONTAINS 'xyz'", Map.of("name", "John"));
+            assertThat(result.result()).isTrue();
+            assertThat(result.trace().type()).isEqualTo("NOT_CONTAINS");
+        }
+    }
+
+    @Nested
     @DisplayName("CONTAINS operator")
     class ContainsOperator {
 

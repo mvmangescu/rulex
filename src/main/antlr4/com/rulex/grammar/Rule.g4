@@ -21,6 +21,7 @@ expr
     | expr OR  expr                          # OrExpr
     | '(' expr ')'                           # GroupExpr
     | arith compOp arith                     # ComparisonPred
+    | arith NOT CONTAINS arith               # NotContainsPred
     | arith CONTAINS arith                   # ContainsPred
     | arith IS NOT NULL_LIT                  # IsNotNullPred
     | arith IS     NULL_LIT                  # IsNullPred
