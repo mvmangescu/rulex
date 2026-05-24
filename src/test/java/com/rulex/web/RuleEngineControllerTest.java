@@ -10,7 +10,6 @@ import com.rulex.engine.RuleEngine.ValidationResult;
 import com.rulex.engine.TraceNode;
 import com.rulex.exception.RuleEvaluationException;
 import com.rulex.exception.RuleParseException;
-import com.rulex.engine.function.FunctionRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -25,7 +24,6 @@ import java.util.Map;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -42,9 +40,6 @@ class RuleEngineControllerTest {
 
     @MockBean
     RuleEngine ruleEngine;
-
-    @MockBean
-    FunctionRegistry functionRegistry;
 
     // ── POST /evaluate ────────────────────────────────────────────────────────
 
@@ -198,20 +193,4 @@ class RuleEngineControllerTest {
         }
     }
 
-    // ── GET /functions ────────────────────────────────────────────────────────
-
-    @Nested
-    @DisplayName("GET /api/v1/rules/functions")
-    class FunctionsEndpoint {
-
-        @Test
-        @DisplayName("Returns 200 with set of function names")
-        void functions_returnsFunctionNames() throws Exception {
-            when(functionRegistry.getFunctionNames()).thenReturn(java.util.Set.of("contains", "startsWith", "matches"));
-
-            mockMvc.perform(get("/api/v1/rules/functions"))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$").isArray());
-        }
-    }
 }

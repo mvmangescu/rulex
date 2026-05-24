@@ -1,12 +1,8 @@
 package com.rulex.controller;
 
-import com.rulex.dto.EvaluateRequest;
-import com.rulex.dto.EvaluateResponse;
-import com.rulex.dto.ValidateRequest;
-import com.rulex.dto.ValidateResponse;
+import com.rulex.dto.*;
 import com.rulex.engine.RuleEngine;
 import com.rulex.engine.RuleEngine.ValidationResult;
-import com.rulex.engine.function.FunctionRegistry;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -19,8 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Set;
-
 @Slf4j
 @RequiredArgsConstructor
 @RestController
@@ -30,7 +24,6 @@ import java.util.Set;
 public class RuleEngineController {
 
     private final RuleEngine ruleEngine;
-    private final FunctionRegistry functionRegistry;
 
     @Operation(summary = "Evaluate a rule expression",
             description = "Evaluates a rule against the given context. Pass ?explain=true for a full execution trace.")
@@ -61,11 +54,13 @@ public class RuleEngineController {
         return ResponseEntity.ok(new ValidateResponse(result.valid(), result.error()));
     }
 
-    @Operation(summary = "List available built-in functions",
-            description = "Returns the names of all functions that can be used in rule expressions.")
-    @ApiResponse(responseCode = "200", description = "Set of function names")
-    @GetMapping("/functions")
-    public ResponseEntity<Set<String>> functions() {
-        return ResponseEntity.ok(functionRegistry.getFunctionNames());
+    @Operation(summary = "Dry-run a rule expression",
+            description = "Parses the expression and returns its parse tree without evaluating. Context is not required.")
+    @ApiResponse(responseCode = "200", description = "Expression is valid — parse tree returned")
+    @ApiResponse(responseCode = "400", description = "Invalid rule expression", content = @Content)
+    @PostMapping("/dry-run")
+    public ResponseEntity<DryRunResponse> dryRun(@Valid @RequestBody ValidateRequest request) {
+        log.info("Dry-run rule, length={}", request.rule().length());
+        return ResponseEntity.ok(new DryRunResponse(request.rule(), ruleEngine.dryRun(request.rule())));
     }
 }

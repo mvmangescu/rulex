@@ -8,11 +8,18 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.TerminalNode;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 
 @Slf4j
 @Service
@@ -45,6 +52,11 @@ public class RuleEngine {
         });
     }
 
+    public ParseTreeNode dryRun(String rule) {
+        CompiledRule compiled = compiler.compile(rule);
+        return toNode(compiled.tree(), rule);
+    }
+
     public ValidationResult validate(String rule) {
         try {
             compiler.validate(rule);
@@ -53,6 +65,23 @@ public class RuleEngine {
             log.debug("Validation failed: {}", e.getMessage());
             return ValidationResult.failure(e.getMessage());
         }
+    }
+
+    private ParseTreeNode toNode(ParseTree tree, String expression) {
+        if (tree instanceof TerminalNode t) {
+            if (t.getSymbol().getType() == Token.EOF) return null;
+            return new ParseTreeNode("TOKEN", t.getText(), null);
+        }
+        String type = tree.getClass().getSimpleName().replace("Context", "");
+        String text = null;
+        if (tree instanceof ParserRuleContext prc && prc.start != null && prc.stop != null) {
+            text = expression.substring(prc.start.getStartIndex(), prc.stop.getStopIndex() + 1);
+        }
+        List<ParseTreeNode> children = IntStream.range(0, tree.getChildCount())
+                .mapToObj(i -> toNode(tree.getChild(i), expression))
+                .filter(Objects::nonNull)
+                .toList();
+        return new ParseTreeNode(type, text, children.isEmpty() ? null : children);
     }
 
     private RuleEvaluator evaluator(Map<String, Object> context) {
