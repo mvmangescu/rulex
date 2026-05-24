@@ -24,7 +24,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
-import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -75,7 +75,7 @@ public class RuleController {
     @Operation(summary = "List all rules")
     @ApiResponse(responseCode = "200", description = "All stored rules (empty array if none)")
     @GetMapping
-    public ResponseEntity<Collection<RuleResponse>> findAll() {
+    public ResponseEntity<List<RuleResponse>> findAll() {
         return ResponseEntity.ok(ruleService.findAll());
     }
 

@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -34,7 +34,7 @@ public class RuleService {
     public RuleResponse update(String name, UpdateRuleRequest request) {
         RuleEntity existing = ruleRepository.findByName(name).orElseThrow(() -> new RuleNotFoundException(name));
         ruleCache.invalidate(existing.getExpression());
-        ruleMapper.applyNonNull(request, existing);
+        ruleMapper.update(request, existing);
         return ruleMapper.toRuleResponse(ruleRepository.save(existing));
     }
 
@@ -44,8 +44,8 @@ public class RuleService {
     }
 
     @Transactional(readOnly = true)
-    public Collection<RuleResponse> findAll() {
-        return ruleRepository.findAll().stream().map(ruleMapper::toRuleResponse).toList();
+    public List<RuleResponse> findAll() {
+        return ruleMapper.toRuleResponseList(ruleRepository.findAll());
     }
 
     @Transactional

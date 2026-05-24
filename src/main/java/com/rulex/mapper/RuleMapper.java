@@ -6,16 +6,20 @@ import com.rulex.dto.UpdateRuleRequest;
 import com.rulex.entity.RuleEntity;
 import org.mapstruct.*;
 
+import java.util.List;
+
 @Mapper(componentModel = "spring")
 public interface RuleMapper {
 
     RuleResponse toRuleResponse(RuleEntity entity);
 
+    List<RuleResponse> toRuleResponseList(List<RuleEntity> entities);
+
     @Mapping(target = "id", ignore = true)
     RuleEntity toEntity(CreateRuleRequest request);
 
-    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "name", ignore = true)
-    void applyNonNull(UpdateRuleRequest request, @MappingTarget RuleEntity entity);
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void update(UpdateRuleRequest request, @MappingTarget RuleEntity entity);
 }
