@@ -19,7 +19,6 @@ public interface RuleMapper {
     RuleEntity toEntity(CreateRuleRequest request);
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "name", ignore = true)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void update(UpdateRuleRequest request, @MappingTarget RuleEntity entity);
 }

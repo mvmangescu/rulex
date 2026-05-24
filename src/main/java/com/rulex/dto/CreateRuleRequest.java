@@ -4,7 +4,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 public record CreateRuleRequest(
-
         @NotBlank
         @Size(max = 256)
         String name,

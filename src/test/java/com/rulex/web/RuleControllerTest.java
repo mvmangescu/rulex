@@ -42,7 +42,7 @@ class RuleControllerTest {
         return new RuleResponse(1L, "senior-check", "age > 60", null);
     }
 
-    // ── POST  ───────────────────────────────────────────────────────────
+    // ── POST /api/v1/rules ────────────────────────────────────────────────────
 
     @Nested
     @DisplayName("POST /api/v1/rules")
@@ -57,7 +57,7 @@ class RuleControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"name\": \"senior-check\", \"expression\": \"age > 60\"}"))
                     .andExpect(status().isCreated())
-                    .andExpect(header().string("Location", "/api/v1/rules/senior-check"))
+                    .andExpect(header().string("Location", "/api/v1/rules/1"))
                     .andExpect(jsonPath("$.name").value("senior-check"))
                     .andExpect(jsonPath("$.expression").value("age > 60"));
         }
@@ -73,48 +73,51 @@ class RuleControllerTest {
         }
     }
 
-    // ── PUT /named/{name} ─────────────────────────────────────────────────────
+    // ── PUT /api/v1/rules/{id} ────────────────────────────────────────────────
 
     @Nested
-    @DisplayName("PUT /api/v1/rules/{name}")
+    @DisplayName("PUT /api/v1/rules/{id}")
     class UpdateEndpoint {
 
         @Test
         @DisplayName("Returns 200 when updating an existing rule")
         void update_existingRule_returns200() throws Exception {
             RuleResponse updated = new RuleResponse(1L, "senior-check", "age > 65", null);
-            when(ruleService.update(anyString(), any(UpdateRuleRequest.class))).thenReturn(updated);
+            when(ruleService.update(anyLong(), any(UpdateRuleRequest.class))).thenReturn(updated);
 
-            mockMvc.perform(put("/api/v1/rules/senior-check")
+            mockMvc.perform(put("/api/v1/rules/1")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"name\": \"senior-check\", \"expression\": \"age > 65\"}"))
+                            .content("{\"expression\": \"age > 65\"}"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.expression").value("age > 65"));
         }
 
         @Test
-        @DisplayName("Returns 400 when expression is blank")
-        void update_blankExpression_returns400() throws Exception {
-            mockMvc.perform(put("/api/v1/rules/senior-check")
+        @DisplayName("Returns 200 when renaming a rule")
+        void update_renameRule_returns200() throws Exception {
+            RuleResponse renamed = new RuleResponse(1L, "elder-check", "age > 65", null);
+            when(ruleService.update(anyLong(), any(UpdateRuleRequest.class))).thenReturn(renamed);
+
+            mockMvc.perform(put("/api/v1/rules/1")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"name\": \"senior-check\", \"expression\": \"\"}"))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+                            .content("{\"name\": \"elder-check\", \"expression\": \"age > 65\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.name").value("elder-check"));
         }
     }
 
-    // ── GET /named/{name} ─────────────────────────────────────────────────────
+    // ── GET /api/v1/rules/{id} ────────────────────────────────────────────────
 
     @Nested
-    @DisplayName("GET /api/v1/rules/{name}")
+    @DisplayName("GET /api/v1/rules/{id}")
     class GetEndpoint {
 
         @Test
         @DisplayName("Returns 200 with rule when found")
         void get_existingRule_returns200() throws Exception {
-            when(ruleService.findByName("senior-check")).thenReturn(Optional.of(sampleRule()));
+            when(ruleService.findById(1L)).thenReturn(Optional.of(sampleRule()));
 
-            mockMvc.perform(get("/api/v1/rules/senior-check"))
+            mockMvc.perform(get("/api/v1/rules/1"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.name").value("senior-check"))
                     .andExpect(jsonPath("$.expression").value("age > 60"));
@@ -123,9 +126,9 @@ class RuleControllerTest {
         @Test
         @DisplayName("Returns 404 when rule does not exist")
         void get_missingRule_returns404() throws Exception {
-            when(ruleService.findByName("unknown")).thenReturn(Optional.empty());
+            when(ruleService.findById(99L)).thenReturn(Optional.empty());
 
-            mockMvc.perform(get("/api/v1/rules/unknown"))
+            mockMvc.perform(get("/api/v1/rules/99"))
                     .andExpect(status().isNotFound());
         }
     }
@@ -158,44 +161,44 @@ class RuleControllerTest {
         }
     }
 
-    // ── DELETE /api/v1/rules/{name} ───────────────────────────────────────────
+    // ── DELETE /api/v1/rules/{id} ─────────────────────────────────────────────
 
     @Nested
-    @DisplayName("DELETE /api/v1/rules/{name}")
+    @DisplayName("DELETE /api/v1/rules/{id}")
     class DeleteEndpoint {
 
         @Test
         @DisplayName("Returns 204 when rule is deleted")
         void delete_existingRule_returns204() throws Exception {
-            when(ruleService.deleteByName("senior-check")).thenReturn(true);
+            when(ruleService.deleteById(1L)).thenReturn(true);
 
-            mockMvc.perform(delete("/api/v1/rules/senior-check"))
+            mockMvc.perform(delete("/api/v1/rules/1"))
                     .andExpect(status().isNoContent());
         }
 
         @Test
         @DisplayName("Returns 404 when rule does not exist")
         void delete_missingRule_returns404() throws Exception {
-            when(ruleService.deleteByName("unknown")).thenReturn(false);
+            when(ruleService.deleteById(99L)).thenReturn(false);
 
-            mockMvc.perform(delete("/api/v1/rules/unknown"))
+            mockMvc.perform(delete("/api/v1/rules/99"))
                     .andExpect(status().isNotFound());
         }
     }
 
-    // ── POST /api/v1/rules/{name}/evaluate ────────────────────────────────────
+    // ── POST /api/v1/rules/{id}/evaluate ─────────────────────────────────────
 
     @Nested
-    @DisplayName("POST /api/v1/rules/{name}/evaluate")
-    class EvaluateNamedEndpoint {
+    @DisplayName("POST /api/v1/rules/{id}/evaluate")
+    class EvaluateEndpoint {
 
         @Test
         @DisplayName("Returns 200 with result when rule exists")
         void evaluate_existingRule_returnsResult() throws Exception {
-            when(ruleService.findByName("senior-check")).thenReturn(Optional.of(sampleRule()));
+            when(ruleService.findById(1L)).thenReturn(Optional.of(sampleRule()));
             when(ruleEngine.evaluate(anyString(), anyMap())).thenReturn(true);
 
-            mockMvc.perform(post("/api/v1/rules/senior-check/evaluate")
+            mockMvc.perform(post("/api/v1/rules/1/evaluate")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"age\": 65}"))
                     .andExpect(status().isOk())
@@ -206,12 +209,12 @@ class RuleControllerTest {
         @Test
         @DisplayName("Returns 200 with trace when explain=true")
         void evaluate_withExplain_returnsTrace() throws Exception {
-            when(ruleService.findByName("senior-check")).thenReturn(Optional.of(sampleRule()));
+            when(ruleService.findById(1L)).thenReturn(Optional.of(sampleRule()));
             TraceNode trace = TraceNode.leaf("age > 60", "COMPARISON", true, "65.0 > 60.0");
             when(ruleEngine.evaluateWithTrace(anyString(), anyMap()))
                     .thenReturn(new TraceResult(true, trace));
 
-            mockMvc.perform(post("/api/v1/rules/senior-check/evaluate")
+            mockMvc.perform(post("/api/v1/rules/1/evaluate")
                             .param("explain", "true")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"age\": 65}"))
@@ -222,11 +225,11 @@ class RuleControllerTest {
         }
 
         @Test
-        @DisplayName("Returns 404 when named rule does not exist")
+        @DisplayName("Returns 404 when rule does not exist")
         void evaluate_missingRule_returns404() throws Exception {
-            when(ruleService.findByName("unknown")).thenReturn(Optional.empty());
+            when(ruleService.findById(99L)).thenReturn(Optional.empty());
 
-            mockMvc.perform(post("/api/v1/rules/unknown/evaluate")
+            mockMvc.perform(post("/api/v1/rules/99/evaluate")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"age\": 65}"))
                     .andExpect(status().isNotFound())

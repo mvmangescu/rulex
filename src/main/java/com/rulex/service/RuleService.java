@@ -31,16 +31,16 @@ public class RuleService {
     }
 
     @Transactional
-    public RuleResponse update(String name, UpdateRuleRequest request) {
-        RuleEntity existing = ruleRepository.findByName(name).orElseThrow(() -> new RuleNotFoundException(name));
+    public RuleResponse update(Long id, UpdateRuleRequest request) {
+        RuleEntity existing = ruleRepository.findById(id).orElseThrow(() -> new RuleNotFoundException(id));
         ruleCache.invalidate(existing.getExpression());
         ruleMapper.update(request, existing);
         return ruleMapper.toRuleResponse(ruleRepository.save(existing));
     }
 
     @Transactional(readOnly = true)
-    public Optional<RuleResponse> findByName(String name) {
-        return ruleRepository.findByName(name).map(ruleMapper::toRuleResponse);
+    public Optional<RuleResponse> findById(Long id) {
+        return ruleRepository.findById(id).map(ruleMapper::toRuleResponse);
     }
 
     @Transactional(readOnly = true)
@@ -49,8 +49,8 @@ public class RuleService {
     }
 
     @Transactional
-    public boolean deleteByName(String name) {
-        return ruleRepository.findByName(name)
+    public boolean deleteById(Long id) {
+        return ruleRepository.findById(id)
                 .map(entity -> {
                     ruleCache.invalidate(entity.getExpression());
                     ruleRepository.delete(entity);
