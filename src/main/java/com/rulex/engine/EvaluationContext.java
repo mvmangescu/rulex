@@ -1,9 +1,12 @@
 package com.rulex.engine;
 
+import lombok.Getter;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+@Getter
 public class EvaluationContext {
 
     private final Map<String, Object> variables;
@@ -14,10 +17,6 @@ public class EvaluationContext {
 
     public static EvaluationContext of(Map<String, Object> variables) {
         return new EvaluationContext(Collections.unmodifiableMap(new HashMap<>(variables)));
-    }
-
-    public Map<String, Object> getVariables() {
-        return variables;
     }
 
     public RuleValue resolve(String name) {
