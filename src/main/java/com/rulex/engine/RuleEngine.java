@@ -46,7 +46,10 @@ public class RuleEngine {
         return measure("trace evaluation", () -> {
             log.debug("Evaluating rule with trace, length={}", rule == null ? 0 : rule.length());
             CompiledRule compiled = compiler.compile(rule);
-            TraceNode trace = new ExplainingEvaluator(evaluator(context), rule).visit(compiled.tree());
+            ExplainingEvaluator explaining = new ExplainingEvaluator(
+                    EvaluationContext.of(context), functionRegistry, properties.maxEvaluationSteps(), rule);
+            explaining.visit(compiled.tree());
+            TraceNode trace = explaining.getTrace();
             return new TraceResult(trace.result(), trace);
         });
     }
