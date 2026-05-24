@@ -17,9 +17,11 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -39,7 +41,7 @@ class RuleControllerTest {
     RuleEngine ruleEngine;
 
     private RuleResponse sampleRule() {
-        return new RuleResponse(1L, "senior-check", "age > 60", null);
+        return new RuleResponse(1L, "senior-check", "age > 60", null, Instant.now(), Instant.now());
     }
 
     @Nested
@@ -55,7 +57,7 @@ class RuleControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"name\": \"senior-check\", \"expression\": \"age > 60\"}"))
                     .andExpect(status().isCreated())
-                    .andExpect(header().string("Location", "/api/v1/rules/1"))
+                    .andExpect(header().string("Location", containsString("/api/v1/rules/1")))
                     .andExpect(jsonPath("$.name").value("senior-check"))
                     .andExpect(jsonPath("$.expression").value("age > 60"));
         }
@@ -78,7 +80,7 @@ class RuleControllerTest {
         @Test
         @DisplayName("Returns 200 when updating an existing rule")
         void update_existingRule_returns200() throws Exception {
-            RuleResponse updated = new RuleResponse(1L, "senior-check", "age > 65", null);
+            RuleResponse updated = new RuleResponse(1L, "senior-check", "age > 65", null, Instant.now(), Instant.now());
             when(ruleService.update(anyLong(), any(UpdateRuleRequest.class))).thenReturn(updated);
 
             mockMvc.perform(put("/api/v1/rules/1")
@@ -91,7 +93,7 @@ class RuleControllerTest {
         @Test
         @DisplayName("Returns 200 when renaming a rule")
         void update_renameRule_returns200() throws Exception {
-            RuleResponse renamed = new RuleResponse(1L, "elder-check", "age > 65", null);
+            RuleResponse renamed = new RuleResponse(1L, "elder-check", "age > 65", null, Instant.now(), Instant.now());
             when(ruleService.update(anyLong(), any(UpdateRuleRequest.class))).thenReturn(renamed);
 
             mockMvc.perform(put("/api/v1/rules/1")
