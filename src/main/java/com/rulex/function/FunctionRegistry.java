@@ -20,7 +20,7 @@ public class FunctionRegistry {
     public void register(RuleFunction fn) {
         String name = fn.getName().toLowerCase();
         functions.put(name, fn);
-        sortedNamesCache = null; // invalidate cache on registration
+        sortedNamesCache = null;
         log.debug("Registered function: {}", name);
     }
 
@@ -37,7 +37,6 @@ public class FunctionRegistry {
         return functions.containsKey(name.toLowerCase());
     }
 
-    /** Returns a sorted, immutable snapshot of registered function names. Cached after first call. */
     public Set<String> getFunctionNames() {
         Set<String> cached = sortedNamesCache;
         if (cached == null) {

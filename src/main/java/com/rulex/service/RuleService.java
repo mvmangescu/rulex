@@ -5,6 +5,7 @@ import com.rulex.dto.CreateRuleRequest;
 import com.rulex.dto.RuleResponse;
 import com.rulex.dto.UpdateRuleRequest;
 import com.rulex.engine.CompiledRule;
+import com.rulex.engine.RuleCompiler;
 import com.rulex.entity.RuleEntity;
 import com.rulex.exception.RuleNotFoundException;
 import com.rulex.mapper.RuleMapper;
@@ -23,9 +24,11 @@ public class RuleService {
     private final RuleRepository ruleRepository;
     private final Cache<String, CompiledRule> ruleCache;
     private final RuleMapper ruleMapper;
+    private final RuleCompiler ruleCompiler;
 
     @Transactional
     public RuleResponse create(CreateRuleRequest request) {
+        ruleCompiler.compile(request.expression());
         RuleEntity entity = ruleMapper.toEntity(request);
         return ruleMapper.toRuleResponse(ruleRepository.save(entity));
     }
@@ -33,6 +36,9 @@ public class RuleService {
     @Transactional
     public RuleResponse update(Long id, UpdateRuleRequest request) {
         RuleEntity existing = ruleRepository.findById(id).orElseThrow(() -> new RuleNotFoundException(id));
+        if (request.expression() != null) {
+            ruleCompiler.compile(request.expression());
+        }
         ruleCache.invalidate(existing.getExpression());
         ruleMapper.update(request, existing);
         return ruleMapper.toRuleResponse(ruleRepository.save(existing));

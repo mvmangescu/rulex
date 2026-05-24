@@ -71,9 +71,6 @@ public final class RuleValue {
                 "Cannot convert value of type " + (raw == null ? "null" : raw.getClass().getName()) + " to boolean");
     }
 
-    /**
-     * Rule-semantics equality: null==null, numeric by value, everything else by string.
-     */
     public boolean equalTo(RuleValue other) {
         if (this.isNull() && other.isNull()) return true;
         if (this.isNull() || other.isNull()) return false;
