@@ -19,7 +19,7 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("Rulex API")
                         .description("Production-ready rule engine — evaluate boolean expressions against a variable context, " +
-                                "store and manage named rules, and inspect evaluation traces.")
+                                "store and manage rules, and inspect evaluation traces.")
                         .version("1.0.0")
                         .contact(new Contact()
                                 .name("Rulex")

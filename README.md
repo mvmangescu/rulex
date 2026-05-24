@@ -1,18 +1,19 @@
 # Rulex — Rule Engine
 
-A production-ready rule engine built with Spring Boot 3 and ANTLR4. Write human-readable boolean expressions, evaluate them at runtime against any data context.
+A production-ready rule engine built with Spring Boot 3 and ANTLR4. Write human-readable boolean expressions, evaluate
+them at runtime against any data context.
 
 ## Stack
 
-| Component | Version |
-|---|---|
-| Java | 21 |
-| Spring Boot | 3.2.5 |
-| ANTLR | 4.13.1 |
-| Cache | Caffeine |
-| Storage | H2 (in-memory JPA) |
-| Metrics | Micrometer / Prometheus |
-| API Docs | SpringDoc / Swagger UI |
+| Component   | Version                        |
+|-------------|--------------------------------|
+| Java        | 21                             |
+| Spring Boot | 3.2.5                          |
+| ANTLR       | 4.13.1                         |
+| Cache       | Caffeine                       |
+| Storage     | H2 (in-memory JPA + Liquibase) |
+| Metrics     | Micrometer / Prometheus        |
+| API Docs    | SpringDoc / Swagger UI         |
 
 ## Quick Start
 
@@ -20,9 +21,10 @@ A production-ready rule engine built with Spring Boot 3 and ANTLR4. Write human-
 mvn spring-boot:run
 ```
 
-- Swagger UI: http://localhost:8080/swagger-ui.html
-- Health: http://localhost:8080/actuator/health
-- Metrics: http://localhost:8080/actuator/prometheus
+- Swagger UI: http://localhost:8484/swagger-ui.html
+- API Docs: http://localhost:8484/api-docs
+- Health: http://localhost:8484/actuator/health
+- Metrics: http://localhost:8484/actuator/prometheus
 
 ---
 
@@ -30,14 +32,14 @@ mvn spring-boot:run
 
 ### Comparisons
 
-| Operator | Example |
-|---|---|
-| `=` | `status = 'active'` |
-| `!=` | `status != 'banned'` |
-| `>` | `age > 18` |
-| `<` | `score < 50` |
-| `>=` | `score >= 85.5` |
-| `<=` | `price <= 99.99` |
+| Operator | Example              |
+|----------|----------------------|
+| `=`      | `status = 'active'`  |
+| `!=`     | `status != 'banned'` |
+| `>`      | `age > 18`           |
+| `<`      | `score < 50`         |
+| `>=`     | `score >= 85.5`      |
+| `<=`     | `price <= 99.99`     |
 
 ### Boolean Logic
 
@@ -72,6 +74,8 @@ Works on strings and collections:
 ```
 name CONTAINS 'oh'
 tags CONTAINS 'java'
+name NOT CONTAINS 'test'
+tags NOT CONTAINS 'legacy'
 ```
 
 ### Arithmetic
@@ -85,23 +89,16 @@ abs(balance - target) < 10
 
 ### Built-in Functions
 
-| Function | Description |
-|---|---|
-| `abs(x)` | Absolute value |
-| `ceil(x)` | Ceiling |
-| `floor(x)` | Floor |
-| `round(x)` | Round to nearest integer |
-| `length(s)` | String length or collection size |
-| `upper(s)` | Uppercase |
-| `lower(s)` | Lowercase |
-| `trim(s)` | Strip whitespace |
-
-```
-abs(balance) > 100
-length(name) >= 3
-upper(status) = 'ACTIVE'
-round(score) >= 90
-```
+| Function    | Description                      | Example                  |
+|-------------|----------------------------------|--------------------------|
+| `abs(x)`    | Absolute value                   | `abs(-10)` → 10          |
+| `ceil(x)`   | Ceiling                          | `ceil(3.2)` → 4          |
+| `floor(x)`  | Floor                            | `floor(3.8)` → 3         |
+| `round(x)`  | Round to nearest integer         | `round(3.5)` → 4         |
+| `length(s)` | String length or collection size | `length('hello')` → 5    |
+| `upper(s)`  | Uppercase                        | `upper('hello')` → HELLO |
+| `lower(s)`  | Lowercase                        | `lower('HELLO')` → hello |
+| `trim(s)`   | Strip whitespace                 | `trim(' hi ')` → hi      |
 
 ### Field References
 
@@ -133,7 +130,11 @@ name = "O'Brien"
 
 ## REST API
 
-### Evaluate a rule
+Base path: `/api/v1/rules`
+
+### Stateless Evaluation
+
+#### Evaluate a rule
 
 ```
 POST /api/v1/rules/evaluate
@@ -142,17 +143,23 @@ POST /api/v1/rules/evaluate
 ```json
 {
   "rule": "age > 18 AND active = true",
-  "context": { "age": 25, "active": true }
+  "context": {
+    "age": 25,
+    "active": true
+  }
 }
 ```
 
 Response:
 
 ```json
-{ "result": true, "rule": "age > 18 AND active = true", "requestId": "abc-123" }
+{
+  "result": true,
+  "rule": "age > 18 AND active = true"
+}
 ```
 
-### Evaluate with execution trace
+#### Evaluate with execution trace
 
 Add `?explain=true` to see exactly how the rule was evaluated:
 
@@ -164,49 +171,39 @@ POST /api/v1/rules/evaluate?explain=true
 {
   "result": true,
   "rule": "age > 18 AND active = true",
-  "requestId": "abc-123",
   "trace": {
     "expression": "age > 18 AND active = true",
     "type": "AND",
     "result": true,
     "children": [
-      { "expression": "age > 18",     "type": "COMPARISON", "result": true,  "evaluated": "25.0 > 18.0" },
-      { "expression": "active = true","type": "COMPARISON", "result": true,  "evaluated": "true = true" }
+      {
+        "expression": "age > 18",
+        "type": "COMPARISON",
+        "result": true,
+        "evaluated": "25.0 > 18.0"
+      },
+      {
+        "expression": "active = true",
+        "type": "COMPARISON",
+        "result": true,
+        "evaluated": "true = true"
+      }
     ]
   }
 }
 ```
 
-### Validate syntax (no context required)
+#### Validate syntax
+
+Checks syntax without evaluating. No context required.
 
 ```
 POST /api/v1/rules/validate
 ```
 
 ```json
-{ "rule": "age >> 18" }
-```
-
-Response:
-
-```json
-{ "valid": false, "error": "Parse error in expression [age >> 18] at line 1:5 — extraneous input '>'" }
-```
-
-### Batch evaluate
-
-Evaluate multiple rules in a single call. Per-rule failures do not fail the batch.
-
-```
-POST /api/v1/rules/batch-evaluate
-```
-
-```json
 {
-  "rules": [
-    { "rule": "age > 18",      "context": { "age": 25 } },
-    { "rule": "score >= 90",   "context": { "score": 85 } }
-  ]
+  "rule": "age >> 18"
 }
 ```
 
@@ -214,70 +211,135 @@ Response:
 
 ```json
 {
-  "results": [
-    { "index": 0, "rule": "age > 18",    "result": true,  "success": true },
-    { "index": 1, "rule": "score >= 90", "result": false, "success": true }
-  ],
-  "requestId": "abc-123"
+  "valid": false,
+  "error": "Parse error in expression [age >> 18] at line 1:5 — extraneous input '>'"
 }
 ```
 
-### List available functions
+#### Dry-run (parse tree)
+
+Parses the expression and returns its parse tree without evaluating. Useful for tooling and syntax highlighting.
 
 ```
-GET /api/v1/rules/functions
+POST /api/v1/rules/dry-run
+```
+
+```json
+{
+  "rule": "age > 18 AND active = true"
+}
+```
+
+Response:
+
+```json
+{
+  "rule": "age > 18 AND active = true",
+  "parseTree": {
+    "type": "Program",
+    "text": "age > 18 AND active = true",
+    "children": [
+      {
+        "type": "AndExpr",
+        "text": "age > 18 AND active = true",
+        "children": [
+          {
+            "type": "ComparisonPred",
+            "text": "age > 18"
+          },
+          {
+            "type": "ComparisonPred",
+            "text": "active = true"
+          }
+        ]
+      }
+    ]
+  }
+}
 ```
 
 ---
 
-## Named Rules
+### Rule CRUD
 
-Store, manage, and evaluate rules by name. Updates automatically evict the old compiled form from cache.
+Store, manage, and evaluate rules by id. Updates automatically evict the old compiled form from cache.
 
-### Create or update
-
-```
-PUT /api/v1/rules/named/{name}
-```
-
-```json
-{ "expression": "age > 60 AND tier = 'gold'" }
-```
-
-Returns `201 Created` with a `Location` header on first save; `200 OK` on update.
-
-### Get
+#### Create
 
 ```
-GET /api/v1/rules/named/{name}
+POST /api/v1/rules
 ```
 
 ```json
-{ "name": "senior-gold", "expression": "age > 60 AND tier = 'gold'", "createdAt": "...", "updatedAt": "..." }
+{
+  "name": "senior-gold",
+  "expression": "age > 60 AND tier = 'gold'",
+  "description": "Senior gold tier check"
+}
 ```
 
-### List all
+Returns `201 Created` with a `Location: /api/v1/rules/{id}` header.
+
+#### Update (partial)
 
 ```
-GET /api/v1/rules/named
-```
-
-### Delete
-
-```
-DELETE /api/v1/rules/named/{name}
-```
-
-Returns `204 No Content`.
-
-### Evaluate a named rule
-
-```
-POST /api/v1/rules/named/{name}/evaluate
+PUT /api/v1/rules/{id}
 ```
 
 ```json
-{ "age": 65, "tier": "gold" }
+{
+  "expression": "age > 65 AND tier = 'gold'"
+}
+```
+
+Omitted fields are left unchanged. Returns `200 OK` with the updated rule.
+
+#### Get by id
+
+```
+GET /api/v1/rules/{id}
+```
+
+```json
+{
+  "id": 1,
+  "name": "senior-gold",
+  "expression": "age > 60 AND tier = 'gold'",
+  "description": "Senior gold tier check",
+  "createdAt": "2026-01-01T10:00:00Z",
+  "updatedAt": "2026-01-02T08:30:00Z"
+}
+```
+
+#### List all
+
+```
+GET /api/v1/rules
+```
+
+Returns an array of rule objects (empty array if none).
+
+#### Delete
+
+```
+DELETE /api/v1/rules/{id}
+```
+
+Returns `204 No Content`. Evicts the expression from the compile cache.
+
+#### Evaluate a stored rule
+
+```
+POST /api/v1/rules/{id}/evaluate
+```
+
+Request body is the context (optional — defaults to empty):
+
+```json
+{
+  "age": 65,
+  "tier": "gold"
+}
 ```
 
 Supports `?explain=true` the same as the anonymous evaluate endpoint.
@@ -292,20 +354,17 @@ All errors return a consistent JSON envelope:
 {
   "error": "PARSE_ERROR",
   "message": "Parse error in expression [age >> 18] at line 1:5 — extraneous input '>'",
-  "timestamp": "2026-01-01T00:00:00Z",
-  "requestId": "abc-123"
+  "timestamp": "2026-01-01T00:00:00Z"
 }
 ```
 
-| HTTP | Error code | When |
-|---|---|---|
-| 400 | `PARSE_ERROR` | Invalid expression syntax |
-| 400 | `VALIDATION_ERROR` | Missing/invalid request fields or batch too large |
-| 404 | `NOT_FOUND` | Named rule does not exist |
-| 422 | `EVALUATION_ERROR` | Runtime type mismatch or evaluation error |
-| 500 | `INTERNAL_ERROR` | Unexpected server error |
-
-Every response includes a `requestId` (echoed from the `X-Request-ID` request header, or server-generated) for log correlation.
+| HTTP | Error code         | When                                      |
+|------|--------------------|-------------------------------------------|
+| 400  | `PARSE_ERROR`      | Invalid expression syntax                 |
+| 400  | `VALIDATION_ERROR` | Missing/invalid request fields            |
+| 404  | `NOT_FOUND`        | Rule does not exist                       |
+| 422  | `EVALUATION_ERROR` | Runtime type mismatch or evaluation error |
+| 500  | `INTERNAL_ERROR`   | Unexpected server error                   |
 
 ---
 
@@ -317,7 +376,6 @@ rulex:
   cache-ttl-seconds: 3600    # evict after 1 hour
   max-expression-length: 4096
   max-evaluation-steps: 10000  # guards against pathologically complex rules
-  max-batch-size: 50
 ```
 
 Compiled rules are cached in Caffeine — repeated evaluations of the same expression string skip re-parsing entirely.
@@ -329,11 +387,14 @@ Compiled rules are cached in Caffeine — repeated evaluations of the same expre
 Implement `RuleFunction` and annotate with `@Component` — Spring auto-discovers and registers it at startup:
 
 ```java
+
 @Component
 public class StartsWithFunction implements RuleFunction {
 
     @Override
-    public String getName() { return "startsWith"; }
+    public String getName() {
+        return "startsWith";
+    }
 
     @Override
     public RuleValue execute(List<RuleValue> args, EvaluationContext ctx) {
@@ -355,25 +416,31 @@ startsWith(name, 'Jo') AND age > 18
 ## Programmatic Usage
 
 ```java
-@Autowired RuleEngine ruleEngine;
+
+@Autowired
+RuleEngine ruleEngine;
 
 Map<String, Object> context = Map.of(
-    "age",    25,
-    "status", "active",
-    "tags",   List.of("java", "spring")
+        "age", 25,
+        "status", "active",
+        "tags", List.of("java", "spring")
 );
 
 // Simple evaluation
 boolean result = ruleEngine.evaluate(
-    "age > 18 AND status = 'active' AND tags CONTAINS 'java'",
-    context
+        "age > 18 AND status = 'active' AND tags CONTAINS 'java'",
+        context
 );
 
 // With trace
 RuleEngine.TraceResult traced = ruleEngine.evaluateWithTrace(
-    "age > 18 AND status = 'active'", context);
-System.out.println(traced.result());  // true
-System.out.println(traced.trace());   // TraceNode tree
+        "age > 18 AND status = 'active'", context);
+System.out.
+
+println(traced.result());  // true
+        System.out.
+
+println(traced.trace());   // TraceNode tree
 ```
 
 ---
@@ -384,52 +451,63 @@ System.out.println(traced.trace());   // TraceNode tree
 src/
 ├── main/
 │   ├── antlr4/com/rulex/grammar/
-│   │   └── Rule.g4                     ANTLR4 grammar (case-insensitive)
+│   │   └── Rule.g4                      ANTLR4 grammar (case-insensitive)
+│   ├── resources/
+│   │   ├── application.yml
+│   │   └── db/changelog/
+│   │       ├── db.changelog-master.yaml
+│   │       └── 1/
+│   │           ├── db.changelog.yaml
+│   │           └── 001-initial-schema.sql
 │   └── java/com/rulex/
 │       ├── engine/
-│       │   ├── RuleEngine.java          Evaluate / validate / trace
-│       │   ├── RuleCompiler.java        Parse + Caffeine cache
-│       │   ├── RuleEvaluator.java       ANTLR visitor — produces RuleValue
-│       │   ├── ExplainingEvaluator.java ANTLR visitor — produces TraceNode
-│       │   ├── Predicates.java          Shared comparison / contains / in logic
-│       │   ├── EvaluationContext.java   Field resolution (single identifier)
-│       │   ├── RuleValue.java           Immutable value wrapper
-│       │   ├── TraceNode.java           Execution trace node (JSON serializable)
-│       │   └── CompiledRule.java        Parse tree + source (record)
-│       ├── function/
-│       │   ├── RuleFunction.java        Extension SPI
-│       │   ├── FunctionRegistry.java    Thread-safe, sorted name cache
-│       │   └── builtin/                 abs, ceil, floor, round, length, upper, lower, trim
-│       ├── store/
-│       │   ├── NamedRuleStore.java      JPA-backed named rule CRUD + cache invalidation
-│       │   ├── NamedRuleEntity.java     H2 entity (package-private)
-│       │   ├── NamedRuleRepository.java Spring Data JPA
-│       │   └── NamedRule.java           Domain record
-│       ├── web/
-│       │   ├── RuleController.java      /evaluate, /validate, /batch-evaluate, /functions
-│       │   ├── NamedRuleController.java /named CRUD + evaluate
-│       │   ├── GlobalExceptionHandler.java Structured error responses
-│       │   ├── RequestIdFilter.java     MDC request ID propagation
-│       │   └── SecurityHeadersFilter.java Security response headers
+│       │   ├── RuleEngine.java           Evaluate / validate / trace / dry-run
+│       │   ├── RuleCompiler.java         Parse + Caffeine cache
+│       │   ├── RuleEvaluator.java        ANTLR visitor — produces RuleValue
+│       │   ├── ExplainingEvaluator.java  ANTLR visitor — produces TraceNode
+│       │   ├── ParseTreeNode.java        Parse tree structure (dry-run)
+│       │   ├── Predicates.java           Comparison / contains / in logic
+│       │   ├── EvaluationContext.java    Field resolution
+│       │   ├── RuleValue.java            Immutable value wrapper
+│       │   ├── TraceNode.java            Execution trace node (JSON)
+│       │   ├── CompiledRule.java         Parse tree + source (record)
+│       │   └── function/
+│       │       ├── RuleFunction.java     Extension SPI
+│       │       ├── FunctionRegistry.java Thread-safe registry
+│       │       └── builtin/             abs, ceil, floor, round, length, upper, lower, trim
+│       ├── controller/
+│       │   ├── RuleEngineController.java /evaluate, /validate, /dry-run
+│       │   └── RuleController.java       CRUD + /{id}/evaluate
+│       ├── service/
+│       │   └── RuleService.java          CRUD + cache invalidation
+│       ├── entity/
+│       │   └── RuleEntity.java           JPA entity
+│       ├── dto/                          Request/response records
 │       ├── config/
-│       │   ├── RuleEngineConfig.java    Caffeine cache bean + metrics
-│       │   └── RuleEngineProperties.java @ConfigurationProperties record
+│       │   ├── RuleEngineConfig.java     Caffeine cache bean + metrics
+│       │   ├── RuleEngineProperties.java @ConfigurationProperties record
+│       │   └── OpenApiConfig.java        Swagger configuration
 │       ├── exception/
+│       │   ├── GlobalExceptionHandler.java
 │       │   ├── RuleParseException.java
-│       │   └── RuleEvaluationException.java
+│       │   ├── RuleEvaluationException.java
+│       │   └── RuleNotFoundException.java
+│       ├── web/
+│       │   ├── RequestIdFilter.java      MDC request ID propagation
+│       │   └── SecurityHeadersFilter.java
 │       └── health/
 │           └── RuleEngineHealthIndicator.java
 └── test/
     └── java/com/rulex/
-        ├── engine/RuleEngineTest.java      Integration tests — 100+ scenarios
-        ├── web/RuleControllerTest.java     Web layer (MockMvc)
-        └── web/NamedRuleControllerTest.java
+        ├── engine/RuleEngineTest.java        Integration tests
+        ├── web/RuleControllerTest.java        Web layer (MockMvc)
+        └── web/RuleEngineControllerTest.java
 ```
 
 ## Build and Test
 
 ```bash
-mvn test              # run all 117 tests
+mvn test              # run all tests
 mvn package           # build fat jar → target/rulex-1.0.0.jar
 java -jar target/rulex-1.0.0.jar
 ```
