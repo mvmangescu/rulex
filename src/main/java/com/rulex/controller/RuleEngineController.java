@@ -6,7 +6,6 @@ import com.rulex.dto.ValidateRequest;
 import com.rulex.dto.ValidateResponse;
 import com.rulex.engine.RuleEngine;
 import com.rulex.function.FunctionRegistry;
-import com.rulex.web.RequestIdFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -15,7 +14,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.MDC;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,10 +41,10 @@ public class RuleEngineController {
         if (explain) {
             RuleEngine.TraceResult traced = ruleEngine.evaluateWithTrace(request.rule(), request.context());
             return ResponseEntity.ok(EvaluateResponse.withTrace(
-                    traced.result(), request.rule(), requestId(), traced.trace()));
+                    traced.result(), request.rule(), traced.trace()));
         }
         boolean result = ruleEngine.evaluate(request.rule(), request.context());
-        return ResponseEntity.ok(EvaluateResponse.of(result, request.rule(), requestId()));
+        return ResponseEntity.ok(EvaluateResponse.of(result, request.rule()));
     }
 
     @Operation(summary = "Validate a rule expression",
@@ -66,9 +64,5 @@ public class RuleEngineController {
     @GetMapping("/functions")
     public ResponseEntity<Set<String>> functions() {
         return ResponseEntity.ok(functionRegistry.getFunctionNames());
-    }
-
-    private static String requestId() {
-        return MDC.get(RequestIdFilter.MDC_KEY);
     }
 }

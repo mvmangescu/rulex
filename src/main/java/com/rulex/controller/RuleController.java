@@ -5,7 +5,6 @@ import com.rulex.dto.RuleResponse;
 import com.rulex.engine.RuleEngine;
 import com.rulex.exception.RuleNotFoundException;
 import com.rulex.service.RuleService;
-import com.rulex.web.RequestIdFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -18,7 +17,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.MDC;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -107,13 +105,9 @@ public class RuleController {
         if (explain) {
             RuleEngine.TraceResult traced = ruleEngine.evaluateWithTrace(rule.expression(), context);
             return ResponseEntity.ok(EvaluateResponse.withTrace(
-                    traced.result(), rule.expression(), requestId(), traced.trace()));
+                    traced.result(), rule.expression(), traced.trace()));
         }
         boolean result = ruleEngine.evaluate(rule.expression(), context);
-        return ResponseEntity.ok(EvaluateResponse.of(result, rule.expression(), requestId()));
-    }
-
-    private static String requestId() {
-        return MDC.get(RequestIdFilter.MDC_KEY);
+        return ResponseEntity.ok(EvaluateResponse.of(result, rule.expression()));
     }
 }
