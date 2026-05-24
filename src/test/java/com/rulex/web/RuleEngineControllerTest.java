@@ -10,7 +10,7 @@ import com.rulex.engine.RuleEngine.ValidationResult;
 import com.rulex.engine.TraceNode;
 import com.rulex.exception.RuleEvaluationException;
 import com.rulex.exception.RuleParseException;
-import com.rulex.function.FunctionRegistry;
+import com.rulex.engine.function.FunctionRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

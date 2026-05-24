@@ -1,7 +1,7 @@
 package com.rulex.engine;
 
 import com.rulex.exception.RuleEvaluationException;
-import com.rulex.function.FunctionRegistry;
+import com.rulex.engine.function.FunctionRegistry;
 import com.rulex.grammar.RuleBaseVisitor;
 import com.rulex.grammar.RuleLexer;
 import com.rulex.grammar.RuleParser;

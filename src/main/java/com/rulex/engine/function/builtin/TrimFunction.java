@@ -1,13 +1,12 @@
-package com.rulex.function.builtin;
-
-import java.util.List;
-
-import org.springframework.stereotype.Component;
+package com.rulex.engine.function.builtin;
 
 import com.rulex.engine.EvaluationContext;
 import com.rulex.engine.RuleValue;
+import com.rulex.engine.function.RuleFunction;
 import com.rulex.exception.RuleEvaluationException;
-import com.rulex.function.RuleFunction;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class TrimFunction implements RuleFunction {
@@ -20,8 +19,7 @@ public class TrimFunction implements RuleFunction {
     @Override
     public RuleValue execute(List<RuleValue> args, EvaluationContext context) {
         if (args.size() != 1) {
-            throw new RuleEvaluationException(
-                    "Function 'trim' requires exactly 1 argument, got " + args.size());
+            throw new RuleEvaluationException("Function 'trim' requires exactly 1 argument, got " + args.size());
         }
         RuleValue arg = args.get(0);
         if (arg.isNull()) {

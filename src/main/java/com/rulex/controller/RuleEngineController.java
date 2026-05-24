@@ -5,7 +5,8 @@ import com.rulex.dto.EvaluateResponse;
 import com.rulex.dto.ValidateRequest;
 import com.rulex.dto.ValidateResponse;
 import com.rulex.engine.RuleEngine;
-import com.rulex.function.FunctionRegistry;
+import com.rulex.engine.RuleEngine.ValidationResult;
+import com.rulex.engine.function.FunctionRegistry;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -56,7 +57,7 @@ public class RuleEngineController {
     @PostMapping("/validate")
     public ResponseEntity<ValidateResponse> validate(@Valid @RequestBody ValidateRequest request) {
         log.info("Validate rule, length={}", request.rule().length());
-        RuleEngine.ValidationResult result = ruleEngine.validate(request.rule());
+        ValidationResult result = ruleEngine.validate(request.rule());
         return ResponseEntity.ok(new ValidateResponse(result.valid(), result.error()));
     }
 

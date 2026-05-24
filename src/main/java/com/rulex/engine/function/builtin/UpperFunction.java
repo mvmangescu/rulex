@@ -1,20 +1,21 @@
-package com.rulex.function.builtin;
-
-import java.util.List;
-import java.util.Locale;
-
-import org.springframework.stereotype.Component;
+package com.rulex.engine.function.builtin;
 
 import com.rulex.engine.EvaluationContext;
 import com.rulex.engine.RuleValue;
+import com.rulex.engine.function.RuleFunction;
 import com.rulex.exception.RuleEvaluationException;
-import com.rulex.function.RuleFunction;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.Locale;
 
 @Component
 public class UpperFunction implements RuleFunction {
 
     @Override
-    public String getName() { return "upper"; }
+    public String getName() {
+        return "upper";
+    }
 
     @Override
     public RuleValue execute(List<RuleValue> args, EvaluationContext context) {

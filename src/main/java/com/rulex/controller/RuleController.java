@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.List;
@@ -46,7 +47,11 @@ public class RuleController {
     public ResponseEntity<RuleResponse> create(@Valid @RequestBody CreateRuleRequest request) {
         log.info("Creating rule '{}'", request.name());
         RuleResponse created = ruleService.create(request);
-        return ResponseEntity.created(URI.create("/api/v1/rules/" + created.id())).body(created);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(created.id())
+                .toUri();
+        return ResponseEntity.created(location).body(created);
     }
 
     @Operation(summary = "Update a rule", description = "Partial update — omitted fields are left unchanged.")

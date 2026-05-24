@@ -9,8 +9,8 @@ import org.springframework.context.annotation.Configuration;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.rulex.engine.CompiledRule;
-import com.rulex.function.FunctionRegistry;
-import com.rulex.function.RuleFunction;
+import com.rulex.engine.function.FunctionRegistry;
+import com.rulex.engine.function.RuleFunction;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;

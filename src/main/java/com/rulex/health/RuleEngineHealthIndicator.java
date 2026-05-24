@@ -2,7 +2,7 @@ package com.rulex.health;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.rulex.engine.CompiledRule;
-import com.rulex.function.FunctionRegistry;
+import com.rulex.engine.function.FunctionRegistry;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.stereotype.Component;

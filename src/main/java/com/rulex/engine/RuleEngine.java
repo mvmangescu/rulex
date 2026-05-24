@@ -3,7 +3,7 @@ package com.rulex.engine;
 import com.rulex.config.RuleEngineProperties;
 import com.rulex.exception.RuleEvaluationException;
 import com.rulex.exception.RuleParseException;
-import com.rulex.function.FunctionRegistry;
+import com.rulex.engine.function.FunctionRegistry;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
