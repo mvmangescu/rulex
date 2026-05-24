@@ -40,8 +40,7 @@ public class RuleEngine {
         return measure("trace evaluation", () -> {
             log.debug("Evaluating rule with trace, length={}", rule == null ? 0 : rule.length());
             CompiledRule compiled = compiler.compile(rule);
-            RuleEvaluator valueEvaluator = evaluator(context);
-            TraceNode trace = new ExplainingEvaluator(valueEvaluator, rule).visit(compiled.tree());
+            TraceNode trace = new ExplainingEvaluator(evaluator(context), rule).visit(compiled.tree());
             return new TraceResult(trace.result(), trace);
         });
     }
@@ -50,11 +49,8 @@ public class RuleEngine {
         try {
             compiler.validate(rule);
             return ValidationResult.success();
-        } catch (RuleParseException e) {
-            log.debug("Validation failed: {}", e.getMessage());
-            return ValidationResult.failure(e.getMessage());
         } catch (Exception e) {
-            log.debug("Validation failed with unexpected error: {}", e.getMessage());
+            log.debug("Validation failed: {}", e.getMessage());
             return ValidationResult.failure(e.getMessage());
         }
     }

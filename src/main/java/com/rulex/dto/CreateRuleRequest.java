@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-@Schema(description = "Request body for creating a new named rule")
+@Schema(description = "Request body for creating a new rule")
 public record CreateRuleRequest(
 
         @Schema(description = "Unique rule name", example = "senior-check")

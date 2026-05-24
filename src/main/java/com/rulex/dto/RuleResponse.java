@@ -2,7 +2,7 @@ package com.rulex.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-@Schema(description = "Stored named rule")
+@Schema(description = "Stored rule")
 public record RuleResponse(
 
         @Schema(description = "Auto-generated rule id", example = "1")
