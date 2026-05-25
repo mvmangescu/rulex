@@ -1,0 +1,177 @@
+Create an ANTLR4 grammar file named `Rule.g4` in package `com.rulex.grammar`
+for a boolean rule expression language used in a production rule engine.
+
+## Requirements
+
+### General
+- Grammar name: `Rule`
+- Case-insensitive: `options { caseInsensitive = true; }`
+- Entry point: `program : expr EOF ;`
+- Whitespace (spaces, tabs, newlines) is skipped
+
+---
+
+### Boolean expressions (`expr`)
+
+Operator precedence, highest to lowest:
+1. `NOT` (unary prefix)
+2. `AND` (binary)
+3. `OR` (binary)
+4. Grouped with `( expr )`
+5. Predicates (leaves)
+
+Predicates (all are alternatives of `expr`):
+- Comparison:        `arith compOp arith`
+- Not-contains:      `arith NOT CONTAINS arith`   ← must come BEFORE contains
+- Contains:          `arith CONTAINS arith`
+- Is not null:       `arith IS NOT NULL_LIT`       ← must come BEFORE is null
+- Is null:           `arith IS NULL_LIT`
+- Is numeric:        `arith IS NUMERIC`
+- Not in:            `arith NOT IN inList`         ← must come BEFORE in
+- In:                `arith IN inList`
+- Function as pred:  `functionCall`
+- Boolean literal:   `BOOL_LIT`
+
+Each alternative must have a labelled name (`# NotContainsPred`, `# ContainsPred`, etc.)
+for ANTLR to generate named visitor methods.
+
+`compOp` rule: `EQ | NEQ | GTE | GT | LTE | LT`
+
+`inList` rule: `'(' arith ( ',' arith )* ')'`
+
+---
+
+### Arithmetic expressions (`arith`)
+
+Operator precedence, highest to lowest:
+1. Unary minus: `MINUS arith`
+2. `*`, `/`, `%` (left-associative binary)
+3. `+`, `-` (left-associative binary)
+4. Grouped: `'(' arith ')'`
+5. Leaves: `functionCall`, field reference (`IDENTIFIER`), `literal`
+
+Each alternative must have a labelled name (`# UnaryMinus`, `# MulExpr`, `# AddExpr`,
+`# ArithParen`, `# ArithFunc`, `# ArithField`, `# ArithLiteral`).
+
+---
+
+### Calls and references
+
+functionCall : IDENTIFIER '(' argList? ')' ;
+argList      : arith ( ',' arith )* ;
+fieldRef     : IDENTIFIER ;
+
+
+
+---
+
+### Literals
+
+literal
+: NUMBER_LIT   # NumberLiteral
+| STRING_LIT   # StringLiteral
+| BOOL_LIT     # BoolLiteral
+| NULL_LIT     # NullLiteral
+;
+
+
+
+---
+
+### Keywords — must be declared BEFORE `IDENTIFIER`
+
+AND      : 'and' ;
+OR       : 'or' ;
+NOT      : 'not' ;
+IS       : 'is' ;
+IN       : 'in' ;
+CONTAINS : 'contains' ;
+NUMERIC  : 'numeric' ;
+NULL_LIT : 'null' ;
+BOOL_LIT : 'true' | 'false' ;
+
+
+
+---
+
+### Operators
+
+NEQ : '!=' ;   GTE : '>=' ;   LTE : '<=' ;
+GT  : '>'  ;   LT  : '<'  ;   EQ  : '='  ;
+
+PLUS : '+' ;  MINUS : '-' ;  STAR : '*' ;
+SLASH : '/' ; PERCENT : '%' ;
+
+
+
+---
+
+### Token rules
+
+NUMBER_LIT : [0-9]+ ( '.' [0-9]+ )? ;
+
+STRING_LIT
+: ''' ( ~['\r\n] | '''' )* '''   // single-quoted, '' escapes a literal '
+| '"'  ( ~["\r\n]           )* '"'   // double-quoted, no escape needed
+;
+
+IDENTIFIER : [a-z_] [a-z0-9_]* ;        // must come AFTER all keywords
+
+WS : [ \t\r\n]+ -> skip ;
+
+
+
+---
+
+### Ordering rules (critical for correct parsing)
+
+1. Keywords before `IDENTIFIER` — otherwise `and`, `or`, `true` etc. would lex as identifiers
+2. `NOT CONTAINS` before `CONTAINS` — otherwise `NOT` is consumed as part of the outer `NOT expr` alternative
+3. `IS NOT NULL_LIT` before `IS NULL_LIT` — same reason
+4. `NOT IN` before `IN` — same reason
+5. `NEQ` (`!=`) before any single-char token — lexer is greedy
+6. `GTE` (`>=`) before `GT`, `LTE` (`<=`) before `LT` — greedy lexer
+
+---
+
+### What the grammar must NOT include
+
+- No `BETWEEN` predicate (not implemented)
+- No dot-notation field access (fields are flat identifiers only)
+- No string concatenation operator
+- No ternary or conditional expressions
+- No type-cast syntax
+- No multi-line comments or single-line comments
+
+---
+
+### Validation
+
+The grammar should parse all of the following without error:
+
+age > 18
+age > 18 AND active = true
+age > 18 OR vip = true
+NOT active = true
+(age > 18 AND score > 50) OR vip = true
+status IN ('active', 'pending', 'trial')
+role NOT IN ('banned', 'suspended')
+name CONTAINS 'oh'
+tags NOT CONTAINS 'legacy'
+email IS NULL
+email IS NOT NULL
+score IS NUMERIC
+abs(balance) > 100
+length(name) >= 3
+upper(status) = 'ACTIVE'
+age > 18 AND active = true OR vip = true
+score * 1.1 + bonus >= 90
+price / 2 > 10
+value % 3 = 0
+-score < 0
+name = 'O''Brien'
+name = "O'Brien"
+flag = true
+missing = null
+age >= 18 AND age <= 65
+length(tags) > 0 AND tags CONTAINS 'java'
